@@ -146,6 +146,11 @@ export function getCurrentSchemaFromDOM() {
 export function createFieldRowElement(field = {}) {
   const id = field.id || 'f_' + Math.random().toString(36).substring(2, 9);
   let name = (field.name || '').trim();
+  if (!name) {
+    const container = document.getElementById('fields-container');
+    const existing = container ? container.querySelectorAll('.field-row').length : 0;
+    name = `field_${existing + 1}`;
+  }
   const typeKey = field.type || 'first_name';
   const blank = Math.min(Math.max(parseFloat(field.blank) || 0, 0), 100);
   const formula = field.formula || '';
@@ -551,8 +556,8 @@ function registerWebMcpTools() {
       format: z.enum(['json', 'csv']).default('json'),
       preset: z.string().optional(),
       fields: z.array(z.object({
-        name: z.string(),
-        type: z.string(),
+        name: z.string().optional().default(''),
+        type: z.string().optional().default('first_name'),
         blank: z.number().optional(),
         formula: z.string().optional()
       })).optional()
@@ -651,20 +656,22 @@ function registerWebMcpTools() {
     name: 'add_field_to_ui',
     description: 'Dynamically adds a new column/field row to the table in the user interface.',
     inputSchema: z.object({
-      name: z.string().describe('Column/field name (e.g. status, score, user_id)'),
-      type: z.string().describe('Data generator type key (e.g. email, uuid_v4, integer, price, date_past)'),
+      name: z.string().optional().default('').describe('Column/field name (e.g. status, score, user_id)'),
+      type: z.string().optional().default('first_name').describe('Data generator type key (e.g. email, uuid_v4, integer, price, date_past)'),
       blank: z.number().min(0).max(100).optional().default(0),
       formula: z.string().optional()
     }),
-    execute: async ({ name, type, blank = 0, formula = '' }) => {
+    execute: async ({ name = '', type = 'first_name', blank = 0, formula = '' }) => {
       try {
-        const trimmedName = (name || '').trim();
-        if (!trimmedName) {
-          return { success: false, error: "Field name cannot be empty." };
-        }
         const container = document.getElementById('fields-container');
         if (!container) {
           return { success: false, error: "Fields container not found in DOM." };
+        }
+
+        let trimmedName = (name || '').trim();
+        if (!trimmedName) {
+          const currentCount = container.querySelectorAll('.field-row').length;
+          trimmedName = `field_${currentCount + 1}`;
         }
 
         const effectiveType = DATA_TYPES[type] ? type : 'first_name';

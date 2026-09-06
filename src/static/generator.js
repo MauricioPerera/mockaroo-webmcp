@@ -1,5 +1,6 @@
 import { DATA_TYPES } from './dataTypes';
 import { faker } from '@faker-js/faker';
+import { sanitizeSchemaFields } from './formatters';
 
 /**
  * Generate a single record based on schema
@@ -9,14 +10,21 @@ export function generateRecord(schema, rowIndex) {
   const deferredFormulas = [];
 
   // Pass 1: generate all non-formula fields
-  for (const field of schema) {
-    if (!field || !field.name) continue;
+  for (let i = 0; i < schema.length; i++) {
+    const field = schema[i];
+    if (!field) continue;
+
+    // Defensively ensure field always has a name (SC-02)
+    let fieldName = (field.name ? String(field.name) : '').trim();
+    if (!fieldName) {
+      fieldName = `field_${i + 1}`;
+    }
 
     const blankPct = parseFloat(field.blank || 0);
     const isBlank = blankPct > 0 && Math.random() * 100 < blankPct;
 
     if (isBlank) {
-      record[field.name] = null;
+      record[fieldName] = null;
       continue;
     }
 
@@ -26,12 +34,12 @@ export function generateRecord(schema, rowIndex) {
     };
 
     if (field.type === 'formula' || (field.formula && field.formula.trim())) {
-      deferredFormulas.push(field);
+      deferredFormulas.push({ ...field, name: fieldName });
     } else {
       try {
-        record[field.name] = typeDef.generate(field.options || {}, { rowIndex, record });
+        record[fieldName] = typeDef.generate(field.options || {}, { rowIndex, record });
       } catch (err) {
-        record[field.name] = null;
+        record[fieldName] = null;
       }
     }
   }
@@ -71,8 +79,6 @@ export function generateRecord(schema, rowIndex) {
 
   return record;
 }
-
-import { sanitizeSchemaFields } from './formatters';
 
 /**
  * Generate N records synchronously in memory (strictly clamped 1 to 10,000) (TC-06, TC-07, TC-08, TC-10, TC-11)

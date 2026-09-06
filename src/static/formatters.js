@@ -1,5 +1,5 @@
 /**
- * Sanitize schema fields by filling empty names and de-duplicating names (TC-10, TC-11)
+ * Sanitize schema fields by filling empty names and de-duplicating names (TC-10, TC-11, SC-02)
  */
 export function sanitizeSchemaFields(fields) {
   if (!fields || !Array.isArray(fields) || fields.length === 0) return [];
@@ -48,7 +48,7 @@ function escapeCSVValue(val, delimiter = ',') {
 }
 
 /**
- * Format records to CSV string
+ * Format records to CSV string (SC-02: Guarantees non-empty headers)
  */
 export function toCSV(records, fields, options = {}) {
   const sanitized = sanitizeSchemaFields(fields);
@@ -73,7 +73,13 @@ export function toCSV(records, fields, options = {}) {
   if (Array.isArray(records)) {
     for (const row of records) {
       if (!row) continue;
-      const line = fieldNames.map(name => escapeCSVValue(row[name], delimiter)).join(delimiter);
+      const line = fieldNames.map((name, i) => {
+        let val = row[name];
+        if (val === undefined && fields && fields[i]) {
+          val = row[fields[i].name] ?? row[''];
+        }
+        return escapeCSVValue(val, delimiter);
+      }).join(delimiter);
       lines.push(line);
     }
   }
@@ -99,7 +105,6 @@ function escapeSQLValue(val, dialect = 'postgres') {
     if (dialect === 'sqlite') return val ? '1' : '0';
     return val ? 'TRUE' : 'FALSE';
   }
-  // Robust SQL escaping: double single-quotes and prevent backslash escapes
   return `'${String(val).replace(/'/g, "''")}'`;
 }
 
@@ -107,7 +112,6 @@ function escapeSQLValue(val, dialect = 'postgres') {
  * Escape and sanitize SQL identifier (column or table name)
  */
 function escapeIdentifier(id, dialect = 'postgres') {
-  // Strip dangerous SQL syntax from identifier
   const safe = String(id || 'mock_data').replace(/[^a-zA-Z0-9_]/g, '_');
   if (dialect === 'mysql') return `\`${safe}\``;
   return `"${safe}"`;
@@ -139,7 +143,13 @@ export function toSQL(records, fields, options = {}) {
   for (let i = 0; i < records.length; i += batchSize) {
     const chunk = records.slice(i, i + batchSize);
     const valueRows = chunk.map(row => {
-      const vals = fieldNames.map(col => escapeSQLValue(row[col], dialect)).join(', ');
+      const vals = fieldNames.map((col, idx) => {
+        let val = row[col];
+        if (val === undefined && fields && fields[idx]) {
+          val = row[fields[idx].name] ?? row[''];
+        }
+        return escapeSQLValue(val, dialect);
+      }).join(', ');
       return `  (${vals})`;
     });
 
@@ -168,8 +178,13 @@ export function toExcel(records, fields) {
   const safeRecords = Array.isArray(records) ? records : [];
   const cleanData = safeRecords.map(row => {
     const obj = {};
-    for (const name of fieldNames) {
-      obj[name] = row ? (row[name] ?? '') : '';
+    for (let i = 0; i < fieldNames.length; i++) {
+      const name = fieldNames[i];
+      let val = row ? row[name] : '';
+      if (val === undefined && fields && fields[i]) {
+        val = row[fields[i].name] ?? row[''] ?? '';
+      }
+      obj[name] = val ?? '';
     }
     return obj;
   });
