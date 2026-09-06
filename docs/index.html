@@ -51,6 +51,15 @@
   <!-- SheetJS for Excel (.xlsx) Generation -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
+  <!-- WebMCP window.modelContext bridge for AI Agent compatibility -->
+  <script>
+    Object.defineProperty(window, 'modelContext', {
+      get() { return document.modelContext; },
+      set(v) { document.modelContext = v; },
+      configurable: true
+    });
+  </script>
+
   <!-- Mockaroo Static Standalone Bundle (Faker.js + FastWebMCP + Zod + Generators) -->
   <script src="js/mockaroo-static.bundle.js" defer></script>
 </head>
