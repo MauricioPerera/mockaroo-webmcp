@@ -2,7 +2,7 @@ import * as FastWebMcp from 'fastwebmcp';
 import { z } from 'zod';
 import { DATA_TYPES } from './dataTypes';
 import { generateRecord, generateDataset } from './generator';
-import { toCSV, toJSON, toSQL, toExcel } from './formatters';
+import { toCSV, toJSON, toSQL, toExcel, sanitizeSchemaFields } from './formatters';
 import { DEFAULT_PRESETS } from './presets';
 import { getStoredSchemas, saveSchema, deleteSchema, exportSchemasJSON, importSchemasJSON } from './storage';
 
@@ -51,32 +51,93 @@ let activeFieldRowForModal = null;
 let activeRowFormulaField = null;
 
 /**
- * Reads the current schema from the DOM table
+ * Robust HTML Escaping (TC-12)
+ */
+export function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+/**
+ * Strict Row Count Sanitization (TC-06, TC-07, TC-08)
+ * Clamps input strictly between 1 and 10,000.
+ */
+export function sanitizeRowCount(val) {
+  const parsed = parseInt(val, 10);
+  if (isNaN(parsed) || parsed < 1) return 10;
+  if (parsed > 10000) return 10000;
+  return parsed;
+}
+
+/**
+ * Displays or removes empty state message when rows are 0 (TC-09)
+ */
+export function updateEmptyState() {
+  const container = document.getElementById('fields-container');
+  if (!container) return;
+  const existingEmpty = document.getElementById('empty-schema-state-row');
+  const rows = container.querySelectorAll('.field-row');
+
+  if (rows.length === 0) {
+    if (!existingEmpty) {
+      const emptyTr = document.createElement('tr');
+      emptyTr.id = 'empty-schema-state-row';
+      emptyTr.innerHTML = `
+        <td colspan="6" class="py-10 text-center text-gray-400 bg-[#2b2b2b] border-2 border-dashed border-[#4a4a4a] rounded my-2">
+          <div class="flex flex-col items-center justify-center gap-2">
+            <svg class="w-8 h-8 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <p class="text-sm font-semibold text-gray-200">No hay columnas en el esquema</p>
+            <p class="text-xs text-gray-400">Haz clic en <strong>+ Add another field</strong> o carga una plantilla desde <strong>Templates</strong>.</p>
+          </div>
+        </td>
+      `;
+      container.appendChild(emptyTr);
+    }
+  } else {
+    if (existingEmpty) {
+      existingEmpty.remove();
+    }
+  }
+}
+
+/**
+ * Reads and sanitizes the current schema from the DOM table (TC-09, TC-10, TC-11)
  */
 export function getCurrentSchemaFromDOM() {
   const container = document.getElementById('fields-container');
   if (!container) return [];
   const rows = container.querySelectorAll('.field-row');
-  const schema = [];
+  if (rows.length === 0) return [];
 
-  rows.forEach(row => {
+  const rawSchema = [];
+  rows.forEach((row, idx) => {
     const id = row.getAttribute('data-id');
     const nameInput = row.querySelector('.field-name-input');
     const typeInput = row.querySelector('.field-type-input');
     const blankInput = row.querySelector('.field-blank-input');
     const formulaInput = row.querySelector('.field-formula-input');
 
-    const name = (nameInput ? nameInput.value : '').trim();
+    let name = (nameInput ? nameInput.value : '').trim();
+    // TC-10: Auto-fill fallback name if empty
+    if (!name) {
+      name = `field_${idx + 1}`;
+      if (nameInput) nameInput.value = name;
+    }
+
     const type = typeInput ? typeInput.value : 'first_name';
     const blank = blankInput ? parseFloat(blankInput.value) || 0 : 0;
     const formula = formulaInput ? formulaInput.value : '';
 
-    if (name) {
-      schema.push({ id, name, type, blank, formula });
-    }
+    rawSchema.push({ id, name, type, blank, formula });
   });
 
-  return schema;
+  // TC-11: De-duplicate column names
+  return sanitizeSchemaFields(rawSchema);
 }
 
 /**
@@ -84,9 +145,9 @@ export function getCurrentSchemaFromDOM() {
  */
 export function createFieldRowElement(field = {}) {
   const id = field.id || 'f_' + Math.random().toString(36).substring(2, 9);
-  const name = field.name || '';
+  let name = (field.name || '').trim();
   const typeKey = field.type || 'first_name';
-  const blank = field.blank ?? 0;
+  const blank = Math.min(Math.max(parseFloat(field.blank) || 0, 0), 100);
   const formula = field.formula || '';
 
   const typeDef = DATA_TYPES[typeKey] || DATA_TYPES.first_name || { name: typeKey, category: 'General' };
@@ -103,7 +164,7 @@ export function createFieldRowElement(field = {}) {
       </svg>
     </td>
 
-    <!-- Field Name -->
+    <!-- Field Name (TC-10) -->
     <td class="py-2 px-3">
       <input 
         type="text" 
@@ -168,6 +229,15 @@ export function createFieldRowElement(field = {}) {
     </td>
   `;
 
+  // Bind blur auto-fill on field name (TC-10)
+  const nameInput = tr.querySelector('.field-name-input');
+  nameInput.addEventListener('blur', (e) => {
+    if (!e.target.value.trim()) {
+      const idx = Array.from(document.querySelectorAll('.field-row')).indexOf(tr) + 1;
+      e.target.value = `field_${idx > 0 ? idx : 1}`;
+    }
+  });
+
   // Bind row events
   const btnSelectType = tr.querySelector('.btn-select-type');
   btnSelectType.addEventListener('click', () => {
@@ -184,14 +254,13 @@ export function createFieldRowElement(field = {}) {
   const btnEditFormula = tr.querySelector('.btn-edit-formula');
   btnEditFormula.addEventListener('click', () => {
     activeRowFormulaField = tr;
-    const nameInput = tr.querySelector('.field-name-input');
+    const nameVal = nameInput ? nameInput.value.trim() : 'Field';
     const formulaInput = tr.querySelector('.field-formula-input');
     const currentFormula = formulaInput ? formulaInput.value : '';
-    const fieldName = nameInput ? nameInput.value : 'Field';
 
     const modalTitle = document.getElementById('formula-field-name');
     const textarea = document.getElementById('formula-editor-textarea');
-    if (modalTitle) modalTitle.textContent = fieldName;
+    if (modalTitle) modalTitle.textContent = nameVal;
     if (textarea) textarea.value = currentFormula;
 
     populateFormulaChips();
@@ -202,18 +271,10 @@ export function createFieldRowElement(field = {}) {
   const btnDelete = tr.querySelector('.btn-delete-row');
   btnDelete.addEventListener('click', () => {
     tr.remove();
+    updateEmptyState();
   });
 
   return tr;
-}
-
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 /**
@@ -223,10 +284,14 @@ export function loadSchemaIntoDOM(fields) {
   const container = document.getElementById('fields-container');
   if (!container) return;
   container.innerHTML = '';
-  fields.forEach(field => {
-    const rowEl = createFieldRowElement(field);
-    container.appendChild(rowEl);
-  });
+
+  if (Array.isArray(fields) && fields.length > 0) {
+    fields.forEach(field => {
+      const rowEl = createFieldRowElement(field);
+      container.appendChild(rowEl);
+    });
+  }
+  updateEmptyState();
 }
 
 /**
@@ -259,7 +324,7 @@ function populateFormulaChips() {
  */
 function filterTypeCatalog(query) {
   const cards = document.querySelectorAll('.type-card');
-  const q = query.toLowerCase().trim();
+  const q = (query || '').toLowerCase().trim();
   let visibleCount = 0;
 
   cards.forEach(card => {
@@ -422,7 +487,6 @@ function buildWebMcpInspector() {
       const paramsInput = document.getElementById('runner-tool-params');
       if (select) {
         select.value = tool.name;
-        // set default template
         let defaultParams = '{}';
         if (tool.name === 'generate_data') {
           defaultParams = JSON.stringify({ count: 3, format: 'json', fields: [{ name: 'id', type: 'uuid_v4' }, { name: 'name', type: 'full_name' }] }, null, 2);
@@ -438,7 +502,6 @@ function buildWebMcpInspector() {
     container.appendChild(div);
   });
 
-  // Populate runner select
   const runnerSelect = document.getElementById('runner-tool-select');
   if (runnerSelect) {
     runnerSelect.innerHTML = tools.map(t => `<option value="${t.name}">${t.name}</option>`).join('');
@@ -446,7 +509,7 @@ function buildWebMcpInspector() {
 }
 
 /**
- * Registers WebMCP tools for AI agents
+ * Registers WebMCP tools for AI agents with defensive error handling (TC-16, TC-17, TC-18)
  */
 function registerWebMcpTools() {
   const { registerTool } = FastWebMcp;
@@ -479,10 +542,10 @@ function registerWebMcpTools() {
     }
   });
 
-  // Tool 3: generate_data
+  // Tool 3: generate_data (Defensive TC-17)
   registerTool({
     name: 'generate_data',
-    description: 'Generates synthetic records directly in browser memory and returns JSON or CSV. Supports count (1-5000) and custom field specifications.',
+    description: 'Generates synthetic records directly in browser memory. Supports count (1-10000) and custom fields or presets.',
     inputSchema: z.object({
       count: z.number().min(1).max(10000).default(5),
       format: z.enum(['json', 'csv']).default('json'),
@@ -495,27 +558,65 @@ function registerWebMcpTools() {
       })).optional()
     }),
     execute: async ({ count = 5, format = 'json', preset, fields }) => {
-      let schemaToUse = fields;
-      if (!schemaToUse || !schemaToUse.length) {
-        if (preset) {
-          const schemas = getStoredSchemas();
-          const p = schemas[preset] || DEFAULT_PRESETS[preset];
-          if (p && p.fields) schemaToUse = p.fields;
-        }
-        if (!schemaToUse || !schemaToUse.length) {
-          schemaToUse = getCurrentSchemaFromDOM();
-        }
-      }
+      try {
+        const clampedCount = sanitizeRowCount(count);
+        let schemaToUse = fields;
 
-      const records = generateDataset(schemaToUse, count);
-      if (format === 'csv') {
-        return toCSV(records, schemaToUse);
+        if (!schemaToUse || !schemaToUse.length) {
+          if (preset) {
+            const schemas = getStoredSchemas();
+            const p = schemas[preset] || DEFAULT_PRESETS[preset];
+            if (!p) {
+              return {
+                success: false,
+                error: `Preset "${preset}" not found. Available presets: ${Object.keys(DEFAULT_PRESETS).join(', ')}`
+              };
+            }
+            if (p && p.fields) schemaToUse = p.fields;
+          }
+          if (!schemaToUse || !schemaToUse.length) {
+            schemaToUse = getCurrentSchemaFromDOM();
+          }
+        }
+
+        if (!schemaToUse || !schemaToUse.length) {
+          return {
+            success: false,
+            error: "No fields defined in schema. Provide a fields array or load a preset."
+          };
+        }
+
+        // TC-17: Track any unknown types to report clearly in warning
+        const unknownTypes = [];
+        schemaToUse.forEach(f => {
+          if (f.type && !DATA_TYPES[f.type] && f.type !== 'formula') {
+            unknownTypes.push(f.type);
+          }
+        });
+
+        const sanitizedSchema = sanitizeSchemaFields(schemaToUse);
+        const records = generateDataset(sanitizedSchema, clampedCount);
+
+        if (format === 'csv') {
+          return toCSV(records, sanitizedSchema);
+        }
+
+        return {
+          success: true,
+          count: records.length,
+          warnings: unknownTypes.length ? `Unknown types fallback used: ${unknownTypes.join(', ')}` : undefined,
+          data: records
+        };
+      } catch (err) {
+        return {
+          success: false,
+          error: `Execution error in generate_data: ${err.message}`
+        };
       }
-      return records;
     }
   });
 
-  // Tool 4: load_schema_in_ui
+  // Tool 4: load_schema_in_ui (Defensive TC-18)
   registerTool({
     name: 'load_schema_in_ui',
     description: 'Replaces the currently visible schema in the user interface with a specified preset or custom schema.',
@@ -523,19 +624,29 @@ function registerWebMcpTools() {
       schema_name: z.string().describe('Name or ID of the preset: users, ecommerce, transactions, employees, telemetry')
     }),
     execute: async ({ schema_name }) => {
-      const schemas = getStoredSchemas();
-      const s = schemas[schema_name] || DEFAULT_PRESETS[schema_name];
-      if (!s || !s.fields) {
-        throw new Error(`Schema or preset "${schema_name}" not found.`);
+      try {
+        if (!schema_name || typeof schema_name !== 'string') {
+          return { success: false, error: "schema_name parameter is required." };
+        }
+        const schemas = getStoredSchemas();
+        const s = schemas[schema_name] || DEFAULT_PRESETS[schema_name];
+        if (!s || !s.fields || !s.fields.length) {
+          return {
+            success: false,
+            error: `Schema or preset "${schema_name}" not found. Available schemas: ${Object.keys(schemas).join(', ')}`
+          };
+        }
+        loadSchemaIntoDOM(s.fields);
+        const titleSpan = document.getElementById('active-preset-name');
+        if (titleSpan) titleSpan.textContent = s.name;
+        return { success: true, loaded_schema: schema_name, fields_count: s.fields.length };
+      } catch (err) {
+        return { success: false, error: err.message };
       }
-      loadSchemaIntoDOM(s.fields);
-      const titleSpan = document.getElementById('active-preset-name');
-      if (titleSpan) titleSpan.textContent = s.name;
-      return { success: true, loaded_schema: schema_name, fields_count: s.fields.length };
     }
   });
 
-  // Tool 5: add_field_to_ui
+  // Tool 5: add_field_to_ui (Defensive TC-10, TC-17)
   registerTool({
     name: 'add_field_to_ui',
     description: 'Dynamically adds a new column/field row to the table in the user interface.',
@@ -546,21 +657,45 @@ function registerWebMcpTools() {
       formula: z.string().optional()
     }),
     execute: async ({ name, type, blank = 0, formula = '' }) => {
-      const container = document.getElementById('fields-container');
-      if (!container) throw new Error('Fields container element not found in DOM');
-      const row = createFieldRowElement({ name, type, blank, formula });
-      container.appendChild(row);
-      return { success: true, added_field: { name, type, blank, formula } };
+      try {
+        const trimmedName = (name || '').trim();
+        if (!trimmedName) {
+          return { success: false, error: "Field name cannot be empty." };
+        }
+        const container = document.getElementById('fields-container');
+        if (!container) {
+          return { success: false, error: "Fields container not found in DOM." };
+        }
+
+        const effectiveType = DATA_TYPES[type] ? type : 'first_name';
+        const row = createFieldRowElement({ name: trimmedName, type: effectiveType, blank, formula });
+        container.appendChild(row);
+        updateEmptyState();
+
+        return {
+          success: true,
+          added_field: { name: trimmedName, type: effectiveType, blank, formula },
+          warning: !DATA_TYPES[type] ? `Type "${type}" unknown; defaulted to "first_name"` : undefined
+        };
+      } catch (err) {
+        return { success: false, error: err.message };
+      }
     }
   });
 
-  // Tool 6: preview_mock_data
+  // Tool 6: preview_mock_data (Defensive TC-09)
   registerTool({
     name: 'preview_mock_data',
     description: 'Generates 10 sample records and opens the Preview modal in the user interface.',
     inputSchema: z.object({}),
     execute: async () => {
       const schema = getCurrentSchemaFromDOM();
+      if (!schema || schema.length === 0) {
+        return {
+          success: false,
+          error: "Cannot preview mock data with 0 schema columns. Add columns first."
+        };
+      }
       const records = generateDataset(schema, 10);
       renderPreviewModal(records, schema);
       openModal('preview-modal');
@@ -572,7 +707,7 @@ function registerWebMcpTools() {
 }
 
 /**
- * Renders Preview Modal content
+ * Renders Preview Modal content safely (TC-09, TC-12)
  */
 function renderPreviewModal(records, schema) {
   const container = document.getElementById('preview-table-container');
@@ -580,10 +715,21 @@ function renderPreviewModal(records, schema) {
   const jsonContainer = document.getElementById('preview-raw-json');
   if (!container) return;
 
-  if (countSpan) countSpan.textContent = `${records.length} records generated`;
-  if (jsonContainer) jsonContainer.textContent = JSON.stringify(records, null, 2);
+  const safeRecords = Array.isArray(records) ? records : [];
+  if (countSpan) countSpan.textContent = `${safeRecords.length} records generated`;
+  if (jsonContainer) jsonContainer.textContent = JSON.stringify(safeRecords, null, 2);
 
-  const fieldNames = schema.map(f => f.name).filter(Boolean);
+  const fieldNames = (schema || []).map(f => f.name).filter(Boolean);
+
+  if (safeRecords.length === 0 || fieldNames.length === 0) {
+    container.innerHTML = `
+      <div class="p-8 text-center text-gray-400 bg-[#242424]">
+        <p class="font-semibold text-sm text-yellow-500">⚠️ No hay datos para previsualizar</p>
+        <p class="text-xs text-gray-400 mt-1">El esquema no contiene campos válidos o no se generaron registros.</p>
+      </div>
+    `;
+    return;
+  }
 
   let html = `
     <table class="w-full text-left text-xs border-collapse">
@@ -596,12 +742,15 @@ function renderPreviewModal(records, schema) {
       <tbody class="divide-y divide-[#383838] font-mono text-gray-200">
   `;
 
-  records.forEach((row, i) => {
+  safeRecords.forEach((row, i) => {
     html += `<tr class="hover:bg-[#333] transition-colors">`;
     html += `<td class="py-2 px-3 text-center text-gray-500 border-r border-[#383838]">${i + 1}</td>`;
     fieldNames.forEach(col => {
-      const val = row[col];
+      const val = row ? row[col] : null;
       let displayVal = val === null ? '<span class="text-gray-500 italic">null</span>' : escapeHtml(String(val));
+      if (typeof val === 'string' && val.startsWith('[Error')) {
+        displayVal = `<span class="text-red-400 font-bold">${escapeHtml(val)}</span>`;
+      }
       html += `<td class="py-2 px-3 border-r border-[#383838] max-w-[200px] truncate" title="${escapeHtml(String(val ?? ''))}">${displayVal}</td>`;
     });
     html += `</tr>`;
@@ -612,17 +761,18 @@ function renderPreviewModal(records, schema) {
 }
 
 /**
- * Triggers browser download of a generated blob
+ * Triggers browser download of a generated blob with validation (TC-06, TC-07, TC-08, TC-09)
  */
 export function downloadDataset() {
   const schema = getCurrentSchemaFromDOM();
-  if (!schema.length) {
-    alert('Please define at least one valid field.');
+  if (!schema || schema.length === 0) {
+    alert('⚠️ Error de esquema: Agregue al menos una columna antes de generar y descargar datos.');
     return;
   }
 
   const countInput = document.getElementById('num_records');
-  const count = Math.min(Math.max(parseInt(countInput ? countInput.value : 100, 10) || 10, 1), 50000);
+  const count = sanitizeRowCount(countInput ? countInput.value : 100);
+  if (countInput) countInput.value = count;
 
   const formatSelect = document.getElementById('format_type');
   const format = formatSelect ? formatSelect.value : 'csv';
@@ -718,24 +868,27 @@ document.addEventListener('DOMContentLoaded', () => {
     new window.Sortable(fieldsContainer, {
       handle: '.drag-handle',
       animation: 150,
-      ghostClass: 'bg-[#404040]'
+      ghostClass: 'bg-[#404040]',
+      onEnd: () => updateEmptyState()
     });
   }
 
-  // 5. Setup Add Field Button
+  // 5. Setup Add Field Button (TC-09)
   const btnAddField = document.getElementById('btn-add-field');
   if (btnAddField) {
     btnAddField.addEventListener('click', () => {
+      const currentRowsCount = document.querySelectorAll('.field-row').length;
       const row = createFieldRowElement({
-        name: 'field_' + (document.querySelectorAll('.field-row').length + 1),
+        name: 'field_' + (currentRowsCount + 1),
         type: 'first_name',
         blank: 0
       });
       fieldsContainer.appendChild(row);
+      updateEmptyState();
     });
   }
 
-  // 6. Setup Formula Save Button
+  // 6. Setup Formula Save Button (TC-14, TC-15)
   const btnSaveFormula = document.getElementById('btn-save-formula');
   if (btnSaveFormula) {
     btnSaveFormula.addEventListener('click', () => {
@@ -760,18 +913,36 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 7. Setup Preview Button
+  // 7. Setup Preview Button (TC-09)
   const btnPreview = document.getElementById('btn-preview');
   if (btnPreview) {
     btnPreview.addEventListener('click', () => {
       const schema = getCurrentSchemaFromDOM();
+      if (!schema || schema.length === 0) {
+        alert('⚠️ Error de esquema: Agregue al menos una columna antes de previsualizar datos.');
+        return;
+      }
       const records = generateDataset(schema, 10);
       renderPreviewModal(records, schema);
       openModal('preview-modal');
     });
   }
 
-  // 8. Setup Format Toggle (Show CSV/SQL/JSON options)
+  // 8. Setup Row Count Constraints (TC-06, TC-07, TC-08)
+  const countInput = document.getElementById('num_records');
+  if (countInput) {
+    countInput.addEventListener('blur', (e) => {
+      e.target.value = sanitizeRowCount(e.target.value);
+    });
+    countInput.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value, 10);
+      if (val > 10000) {
+        e.target.value = 10000;
+      }
+    });
+  }
+
+  // 9. Setup Format Toggle (Show CSV/SQL/JSON options)
   const formatSelect = document.getElementById('format_type');
   if (formatSelect) {
     formatSelect.addEventListener('change', (e) => {
@@ -786,7 +957,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 9. Setup Download Dataset Button & Form Submit
+  // 10. Setup Download Dataset Button & Form Submit
   const btnDownload = document.getElementById('btn-download');
   if (btnDownload) {
     btnDownload.addEventListener('click', (e) => {
@@ -802,7 +973,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 10. Setup Presets modal trigger
+  // 11. Setup Presets modal trigger
   const btnOpenPresets = document.getElementById('btn-open-presets');
   if (btnOpenPresets) {
     btnOpenPresets.addEventListener('click', () => {
@@ -811,14 +982,18 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 11. Save Schema button in Presets modal
+  // 12. Save Schema button in Presets modal
   const btnSaveSchema = document.getElementById('btn-save-current-schema');
   if (btnSaveSchema) {
     btnSaveSchema.addEventListener('click', () => {
+      const schema = getCurrentSchemaFromDOM();
+      if (!schema || schema.length === 0) {
+        alert('⚠️ No hay columnas configuradas para guardar.');
+        return;
+      }
       const name = prompt('Enter a name for this custom schema:');
       if (!name || !name.trim()) return;
       const id = 'custom_' + Date.now();
-      const schema = getCurrentSchemaFromDOM();
       saveSchema(id, {
         id,
         name: name.trim(),
@@ -830,7 +1005,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 12. Export & Import JSON schemas
+  // 13. Export & Import JSON schemas
   const btnExport = document.getElementById('btn-export-schemas');
   if (btnExport) {
     btnExport.addEventListener('click', () => {
@@ -866,7 +1041,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 13. Setup WebMCP Tools & Inspector
+  // 14. Setup WebMCP Tools & Inspector
   registerWebMcpTools();
 
   const btnOpenWebMcp = document.getElementById('btn-open-webmcp');
@@ -877,7 +1052,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 14. Setup WebMCP Runner button inside inspector
+  // 15. Setup WebMCP Runner button inside inspector
   const btnExecuteTool = document.getElementById('btn-execute-runner-tool');
   if (btnExecuteTool) {
     btnExecuteTool.addEventListener('click', async () => {
