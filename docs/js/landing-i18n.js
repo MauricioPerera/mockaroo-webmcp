@@ -695,8 +695,8 @@ function applyTranslations(t) {
 
   const cardOld = document.querySelector('.paradigm-card.old');
   if (cardOld) {
-    cardOld.querySelector('.card-status-badge')!.textContent = t.paradigm.oldBadge;
-    cardOld.querySelector('h3')!.textContent = t.paradigm.oldTitle;
+    cardOld.querySelector('.card-status-badge').textContent = t.paradigm.oldBadge;
+    cardOld.querySelector('h3').textContent = t.paradigm.oldTitle;
     const items = cardOld.querySelectorAll('li');
     if (items.length >= 4) {
       items[0].innerHTML = t.paradigm.oldItem1;
@@ -708,8 +708,8 @@ function applyTranslations(t) {
 
   const cardNew = document.querySelector('.paradigm-card.new');
   if (cardNew) {
-    cardNew.querySelector('.card-status-badge')!.textContent = t.paradigm.newBadge;
-    cardNew.querySelector('h3')!.textContent = t.paradigm.newTitle;
+    cardNew.querySelector('.card-status-badge').textContent = t.paradigm.newBadge;
+    cardNew.querySelector('h3').textContent = t.paradigm.newTitle;
     const items = cardNew.querySelectorAll('li');
     if (items.length >= 4) {
       items[0].innerHTML = t.paradigm.newItem1;
@@ -731,23 +731,23 @@ function applyTranslations(t) {
 
   const toolCards = document.querySelectorAll('.tools-grid .tool-card');
   if (toolCards.length >= 6) {
-    toolCards[0].querySelector('.tool-card-title')!.textContent = t.toolsSection.tool1Name;
-    toolCards[0].querySelector('p')!.textContent = t.toolsSection.tool1Desc;
+    toolCards[0].querySelector('.tool-card-title').textContent = t.toolsSection.tool1Name;
+    toolCards[0].querySelector('p').textContent = t.toolsSection.tool1Desc;
 
-    toolCards[1].querySelector('.tool-card-title')!.textContent = t.toolsSection.tool2Name;
-    toolCards[1].querySelector('p')!.textContent = t.toolsSection.tool2Desc;
+    toolCards[1].querySelector('.tool-card-title').textContent = t.toolsSection.tool2Name;
+    toolCards[1].querySelector('p').textContent = t.toolsSection.tool2Desc;
 
-    toolCards[2].querySelector('.tool-card-title')!.textContent = t.toolsSection.tool3Name;
-    toolCards[2].querySelector('p')!.textContent = t.toolsSection.tool3Desc;
+    toolCards[2].querySelector('.tool-card-title').textContent = t.toolsSection.tool3Name;
+    toolCards[2].querySelector('p').textContent = t.toolsSection.tool3Desc;
 
-    toolCards[3].querySelector('.tool-card-title')!.textContent = t.toolsSection.tool4Name;
-    toolCards[3].querySelector('p')!.textContent = t.toolsSection.tool4Desc;
+    toolCards[3].querySelector('.tool-card-title').textContent = t.toolsSection.tool4Name;
+    toolCards[3].querySelector('p').textContent = t.toolsSection.tool4Desc;
 
-    toolCards[4].querySelector('.tool-card-title')!.textContent = t.toolsSection.tool5Name;
-    toolCards[4].querySelector('p')!.textContent = t.toolsSection.tool5Desc;
+    toolCards[4].querySelector('.tool-card-title').textContent = t.toolsSection.tool5Name;
+    toolCards[4].querySelector('p').textContent = t.toolsSection.tool5Desc;
 
-    toolCards[5].querySelector('.tool-card-title')!.textContent = t.toolsSection.tool6Name;
-    toolCards[5].querySelector('p')!.textContent = t.toolsSection.tool6Desc;
+    toolCards[5].querySelector('.tool-card-title').textContent = t.toolsSection.tool6Name;
+    toolCards[5].querySelector('p').textContent = t.toolsSection.tool6Desc;
   }
 
   // 6. Comparison Table
@@ -844,20 +844,20 @@ function applyTranslations(t) {
 
   const faqItems = document.querySelectorAll('.faq-item');
   if (faqItems.length >= 5) {
-    faqItems[0].querySelector('.faq-question span:first-child')!.textContent = t.faq.q1;
-    faqItems[0].querySelector('.faq-answer p')!.innerHTML = t.faq.a1;
+    faqItems[0].querySelector('.faq-question span:first-child').textContent = t.faq.q1;
+    faqItems[0].querySelector('.faq-answer p').innerHTML = t.faq.a1;
 
-    faqItems[1].querySelector('.faq-question span:first-child')!.textContent = t.faq.q2;
-    faqItems[1].querySelector('.faq-answer p')!.innerHTML = t.faq.a2;
+    faqItems[1].querySelector('.faq-question span:first-child').textContent = t.faq.q2;
+    faqItems[1].querySelector('.faq-answer p').innerHTML = t.faq.a2;
 
-    faqItems[2].querySelector('.faq-question span:first-child')!.textContent = t.faq.q3;
-    faqItems[2].querySelector('.faq-answer p')!.innerHTML = t.faq.a3;
+    faqItems[2].querySelector('.faq-question span:first-child').textContent = t.faq.q3;
+    faqItems[2].querySelector('.faq-answer p').innerHTML = t.faq.a3;
 
-    faqItems[3].querySelector('.faq-question span:first-child')!.textContent = t.faq.q4;
-    faqItems[3].querySelector('.faq-answer p')!.innerHTML = t.faq.a4;
+    faqItems[3].querySelector('.faq-question span:first-child').textContent = t.faq.q4;
+    faqItems[3].querySelector('.faq-answer p').innerHTML = t.faq.a4;
 
-    faqItems[4].querySelector('.faq-question span:first-child')!.textContent = t.faq.q5;
-    faqItems[4].querySelector('.faq-answer p')!.innerHTML = t.faq.a5;
+    faqItems[4].querySelector('.faq-question span:first-child').textContent = t.faq.q5;
+    faqItems[4].querySelector('.faq-answer p').innerHTML = t.faq.a5;
   }
 
   // 9. Bottom CTA Banner
