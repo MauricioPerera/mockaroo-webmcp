@@ -1,0 +1,74 @@
+<!-- Preview Modal Container (injected or displayed via HTMX) -->
+<div id="preview-modal" class="modal-root fixed inset-0 z-50 flex items-center justify-center modal-backdrop p-4">
+  <div class="bg-dark-card border border-dark rounded-lg shadow-2xl w-full max-w-6xl max-h-[85vh] flex flex-col overflow-hidden">
+    
+    <!-- Header -->
+    <div class="px-6 py-4 border-b border-dark flex items-center justify-between bg-[#2f2f2f]">
+      <div>
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span>Data Preview</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-blue-600 text-white font-normal"><%= records.length %> rows generated</span>
+        </h3>
+        <p class="text-xs text-gray-400">Sample of generated mock records based on current schema</p>
+      </div>
+      <button type="button" onclick="closeModal('preview-modal')" class="text-gray-400 hover:text-white p-1 rounded">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Table content -->
+    <div class="flex-1 overflow-auto p-4 bg-dark-main">
+      <% if (!records.length || !fields.length) { %>
+        <div class="p-8 text-center text-gray-400 text-sm">
+          No valid fields to preview. Add at least one field.
+        </div>
+      <% } else { %>
+        <div class="overflow-x-auto rounded border border-dark">
+          <table class="w-full text-left text-xs font-mono border-collapse">
+            <thead class="bg-[#383838] text-gray-300 uppercase tracking-wider font-semibold border-b border-dark">
+              <tr>
+                <th class="p-2.5 text-center text-gray-500 w-12 border-r border-dark">#</th>
+                <% fields.forEach(f => { %>
+                  <th class="p-2.5 border-r border-dark whitespace-nowrap"><%= f.name %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-dark">
+              <% records.forEach((row, idx) => { %>
+                <tr class="hover:bg-[#383838] transition <%= idx % 2 === 0 ? 'bg-[#2a2a2a]' : 'bg-[#303030]' %>">
+                  <td class="p-2 text-center text-gray-500 border-r border-dark"><%= idx + 1 %></td>
+                  <% fields.forEach(f => { %>
+                    <td class="p-2 border-r border-dark whitespace-nowrap text-gray-200">
+                      <% if (row[f.name] === null || row[f.name] === undefined) { %>
+                        <span class="text-gray-500 italic">null</span>
+                      <% } else if (typeof row[f.name] === 'boolean') { %>
+                        <span class="<%= row[f.name] ? 'text-green-400 font-bold' : 'text-red-400 font-bold' %>"><%= row[f.name] %></span>
+                      <% } else { %>
+                        <%= row[f.name] %>
+                      <% } %>
+                    </td>
+                  <% }) %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-3 border-t border-dark bg-[#2f2f2f] flex justify-between items-center text-xs text-gray-400">
+      <span>Ready to export? Use the <b>Download</b> button on the main screen.</span>
+      <button 
+        type="button" 
+        onclick="closeModal('preview-modal')" 
+        class="px-4 py-1.5 rounded bg-dark-input border border-dark text-gray-300 hover:text-white font-medium"
+      >
+        Close Preview
+      </button>
+    </div>
+
+  </div>
+</div>

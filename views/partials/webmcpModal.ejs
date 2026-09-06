@@ -1,0 +1,145 @@
+<!-- WebMCP Inspector Modal -->
+<div id="webmcp-modal" class="modal-root fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+  <div class="bg-dark-card border border-dark rounded-lg shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden">
+    
+    <!-- Modal Header -->
+    <div class="px-6 py-4 border-b border-dark flex items-center justify-between bg-[#2f2f2f]">
+      <div>
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span>WebMCP Tools for AI Agents</span>
+          <span class="text-xs px-2 py-0.5 rounded bg-purple-700 text-purple-100 font-semibold flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+            fastwebmcp active
+          </span>
+        </h3>
+        <p class="text-xs text-gray-400">Exposes Web Machine Learning Model Context Protocol tools directly to AI browser agents</p>
+      </div>
+      <button type="button" onclick="closeModal('webmcp-modal')" class="text-gray-400 hover:text-white p-1 rounded">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-6 space-y-4 overflow-y-auto max-h-[75vh] bg-dark-main text-xs">
+      
+      <!-- Status Card -->
+      <div class="p-4 bg-dark-input rounded-md border border-dark space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-green-500 animate-ping"></span>
+            <span class="font-bold text-white text-sm">WebMCP Engine Status: Online</span>
+          </div>
+          <a href="https://webmcp.com" target="_blank" class="text-purple-400 hover:underline text-[11px] flex items-center gap-1">
+            <span>webmcp.com</span>
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+          </a>
+        </div>
+        <p class="text-gray-400">
+          Tools are registered on <code class="text-green-400">document.modelContext</code> according to the W3C WebMCP specification, powered by <code class="text-yellow-400">fastwebmcp</code> with typed Zod validation.
+        </p>
+      </div>
+
+      <!-- Tools List -->
+      <div>
+        <span class="font-semibold text-gray-300 block mb-2 text-sm">Registered WebMCP Tools:</span>
+        <div class="space-y-3" id="webmcp-tools-list">
+          
+          <div class="p-3 bg-dark-card rounded border border-dark space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-mono font-bold text-green-400 text-sm">get_data_types</span>
+              <button type="button" onclick="testWebMcpTool('get_data_types')" class="px-2.5 py-1 rounded bg-dark-input border border-dark hover:border-green-500 text-white text-[11px]">Run Tool</button>
+            </div>
+            <p class="text-gray-400">Returns list of all available realistic data generator types (+65 types) with categories and descriptions.</p>
+          </div>
+
+          <div class="p-3 bg-dark-card rounded border border-dark space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-mono font-bold text-green-400 text-sm">list_schemas</span>
+              <button type="button" onclick="testWebMcpTool('list_schemas')" class="px-2.5 py-1 rounded bg-dark-input border border-dark hover:border-green-500 text-white text-[11px]">Run Tool</button>
+            </div>
+            <p class="text-gray-400">Lists all available schema templates (users, ecommerce, transactions, employees, telemetry) and custom saved schemas.</p>
+          </div>
+
+          <div class="p-3 bg-dark-card rounded border border-dark space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-mono font-bold text-green-400 text-sm">generate_data</span>
+              <button type="button" onclick="testWebMcpTool('generate_data', { preset: 'users', count: 3 })" class="px-2.5 py-1 rounded bg-dark-input border border-dark hover:border-green-500 text-white text-[11px]">Run Tool (3 Users)</button>
+            </div>
+            <p class="text-gray-400">Generates synthetic mock data using a preset name (users, ecommerce, etc.) or custom field parameters.</p>
+            <div class="text-[11px] text-gray-500 font-mono">Params: preset (string), count (number), format ('json' | 'csv')</div>
+          </div>
+
+          <div class="p-3 bg-dark-card rounded border border-dark space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-mono font-bold text-green-400 text-sm">add_field_to_ui</span>
+              <button type="button" onclick="testWebMcpTool('add_field_to_ui', { name: 'loyalty_points', type: 'integer' })" class="px-2.5 py-1 rounded bg-dark-input border border-dark hover:border-green-500 text-white text-[11px]">Run Tool (Add Field)</button>
+            </div>
+            <p class="text-gray-400">Adds a new column field to the active schema table in the browser UI without page refresh.</p>
+            <div class="text-[11px] text-gray-500 font-mono">Params: name (string), type (string), blank (number), formula (string)</div>
+          </div>
+
+          <div class="p-3 bg-dark-card rounded border border-dark space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="font-mono font-bold text-green-400 text-sm">preview_mock_data</span>
+              <button type="button" onclick="testWebMcpTool('preview_mock_data')" class="px-2.5 py-1 rounded bg-dark-input border border-dark hover:border-green-500 text-white text-[11px]">Run Tool (Open Preview)</button>
+            </div>
+            <p class="text-gray-400">Opens the live data preview modal in the UI and displays sample generated rows.</p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Execution Output Box -->
+      <div id="webmcp-output-box" class="hidden p-3 bg-[#222] rounded border border-purple-800 space-y-1.5">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-purple-300">Tool Execution Result:</span>
+          <button type="button" onclick="document.getElementById('webmcp-output-box').classList.add('hidden')" class="text-gray-500 hover:text-white text-xs">Clear</button>
+        </div>
+        <pre id="webmcp-output-content" class="text-[11px] font-mono text-green-400 max-h-48 overflow-auto"></pre>
+      </div>
+
+      <!-- AI Agent Prompt Snippet -->
+      <div>
+        <span class="font-semibold text-gray-300 block mb-1">Prompt for AI Agents:</span>
+        <pre class="bg-dark-input p-3 rounded border border-dark font-mono text-gray-300 overflow-x-auto select-all">This webpage provides WebMCP tools via document.modelContext (fastwebmcp).
+Available tools:
+- get_data_types({ category?: string })
+- list_schemas()
+- generate_data({ preset: 'users'|'ecommerce'|'transactions'|'employees', count: 10 })
+- add_field_to_ui({ name: string, type: string, blank?: number, formula?: string })
+- preview_mock_data()</pre>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-3 border-t border-dark bg-[#2f2f2f] flex justify-end">
+      <button 
+        type="button" 
+        onclick="closeModal('webmcp-modal')" 
+        class="px-4 py-1.5 rounded bg-dark-input border border-dark text-gray-300 hover:text-white font-medium"
+      >
+        Close
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+async function testWebMcpTool(toolName, args = {}) {
+  const outBox = document.getElementById('webmcp-output-box');
+  const outPre = document.getElementById('webmcp-output-content');
+  outBox.classList.remove('hidden');
+  outPre.textContent = 'Executing tool ' + toolName + '...';
+
+  try {
+    const result = await window.webmcp.invoke(toolName, args);
+    outPre.textContent = JSON.stringify(result, null, 2);
+  } catch (err) {
+    outPre.textContent = 'Error executing tool: ' + err.message;
+  }
+}
+</script>

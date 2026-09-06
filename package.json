@@ -1,0 +1,35 @@
+{
+  "name": "mockaroo-local",
+  "version": "1.0.0",
+  "description": "Local offline Mockaroo clone for synthetic test data generation and Mock REST API",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "build:pages": "esbuild src/static/entry.js --bundle --minify --format=iife --outfile=docs/js/mockaroo-static.bundle.js"
+  },
+  "keywords": [
+    "mockaroo",
+    "test-data",
+    "mock-api",
+    "faker",
+    "htmx"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@faker-js/faker": "^9.5.0",
+    "cors": "^2.8.5",
+    "ejs": "^3.1.10",
+    "express": "^4.21.2",
+    "fastwebmcp": "^0.4.2",
+    "htmx.org": "^2.0.10",
+    "sortablejs": "^1.15.7",
+    "xlsx": "^0.18.5",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

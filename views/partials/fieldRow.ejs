@@ -1,0 +1,82 @@
+<div class="field-row flex items-center gap-3 p-2.5 rounded bg-dark-card border border-dark mb-2 hover:border-gray-500">
+  <!-- Hidden ID & Options & Formula -->
+  <input type="hidden" name="field_id[]" value="<%= field.id %>">
+  <input type="hidden" name="field_type[]" class="field-type-input" value="<%= field.type %>">
+  <input type="hidden" name="field_formula[]" class="field-formula-input" value="<%= field.formula || '' %>">
+  <input type="hidden" name="field_options[]" class="field-options-input" value="<%= JSON.stringify(field.options || {}) %>">
+
+  <!-- Drag Handle -->
+  <div class="drag-handle cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 px-1 py-1" title="Drag to reorder">
+    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+      <path d="M9 3H11V5H9V3ZM13 3H15V5H13V3ZM9 7H11V9H9V7ZM13 7H15V9H13V7ZM9 11H11V13H9V11ZM13 11H15V13H13V11ZM9 15H11V17H9V15ZM13 15H15V17H13V15ZM9 19H11V21H9V19ZM13 19H15V21H13V19Z"/>
+    </svg>
+  </div>
+
+  <!-- Field Name Input -->
+  <div class="w-56">
+    <input 
+      type="text" 
+      name="field_name[]" 
+      class="field-name-input w-full bg-dark-input border border-dark focus:border-green-500 focus:outline-none rounded px-3 py-1.5 text-sm text-white font-mono" 
+      value="<%= field.name %>" 
+      placeholder="column_name" 
+      required
+    >
+  </div>
+
+  <!-- Field Type Button -->
+  <div class="w-56">
+    <button 
+      type="button" 
+      onclick="openTypePicker(this)" 
+      class="field-type-btn w-full text-left bg-dark-input border border-dark hover:border-gray-400 rounded px-3 py-1.5 text-sm font-medium text-gray-200 flex items-center justify-between"
+    >
+      <span class="truncate"><%= (dataTypes[field.type] && dataTypes[field.type].name) || field.type %></span>
+      <svg class="w-4 h-4 text-gray-400 ml-1 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Blank % -->
+  <div class="flex items-center gap-1.5 text-sm text-gray-400">
+    <span class="text-xs">blank:</span>
+    <div class="relative w-16">
+      <input 
+        type="number" 
+        name="field_blank[]" 
+        min="0" 
+        max="100" 
+        value="<%= field.blank || 0 %>" 
+        class="w-full bg-dark-input border border-dark focus:border-green-500 focus:outline-none rounded px-2 py-1 text-sm text-right pr-5 text-white"
+      >
+      <span class="absolute right-1.5 top-1 text-xs text-gray-500">%</span>
+    </div>
+  </div>
+
+  <!-- Formula (fx) Button -->
+  <div>
+    <button 
+      type="button" 
+      onclick="openFormulaEditor(this)" 
+      title="Custom JavaScript Formula"
+      class="field-formula-btn px-2.5 py-1 text-xs font-mono font-bold rounded border border-dark hover:border-gray-400 <%= (field.formula && field.formula.trim()) ? 'bg-amber-600 text-white' : 'text-gray-400 bg-dark-input' %>"
+    >
+      fx
+    </button>
+  </div>
+
+  <!-- Remove Field Button -->
+  <div class="ml-auto">
+    <button 
+      type="button" 
+      onclick="removeFieldRow(this)" 
+      title="Delete Field"
+      class="p-1.5 text-gray-500 hover:text-red-400 hover:bg-dark-input rounded transition"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+      </svg>
+    </button>
+  </div>
+</div>

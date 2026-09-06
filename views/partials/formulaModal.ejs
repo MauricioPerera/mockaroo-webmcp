@@ -1,0 +1,93 @@
+<!-- Formula Editor Modal -->
+<div id="formula-modal" class="modal-root fixed inset-0 z-50 hidden items-center justify-center modal-backdrop p-4">
+  <div class="bg-dark-card border border-dark rounded-lg shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden">
+    
+    <!-- Modal Header -->
+    <div class="px-6 py-4 border-b border-dark flex items-center justify-between bg-[#2f2f2f]">
+      <div>
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span>JavaScript Formula for</span>
+          <code id="formula-field-name" class="text-green-400 bg-dark-input px-2 py-0.5 rounded text-xs">field</code>
+        </h3>
+        <p class="text-xs text-gray-400">Compute dynamic values based on other columns or custom logic</p>
+      </div>
+      <button type="button" onclick="closeModal('formula-modal')" class="text-gray-400 hover:text-white p-1 rounded">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="p-6 space-y-4 bg-dark-main">
+      <div>
+        <label class="block text-xs font-semibold text-gray-300 mb-1">
+          Expression (returns the field value):
+        </label>
+        <textarea 
+          id="formula-editor-text" 
+          rows="4" 
+          placeholder="e.g.: record.first_name.toLowerCase() + '@' + record.domain"
+          class="w-full bg-dark-input border border-dark rounded-md p-3 text-sm font-mono text-green-300 focus:outline-none focus:border-green-500"
+        ></textarea>
+        <p class="text-[11px] text-gray-400 mt-1">
+          Available in scope: <code class="text-gray-300">record</code> (current row columns), <code class="text-gray-300">faker</code>, <code class="text-gray-300">rowIndex</code>.
+        </p>
+      </div>
+
+      <!-- Ready Snippets -->
+      <div>
+        <span class="text-xs font-semibold text-gray-400 block mb-2">Quick Snippets (Click to insert):</span>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button 
+            type="button" 
+            onclick="insertFormulaSnippet('record.first_name.toLowerCase() + \'.\' + record.last_name.toLowerCase() + \'@company.com\'')"
+            class="px-2.5 py-1 rounded bg-dark-card border border-dark hover:border-green-500 text-gray-300 hover:text-white transition"
+          >
+            📧 Corporate Email
+          </button>
+          <button 
+            type="button" 
+            onclick="insertFormulaSnippet('parseFloat((record.unit_price * record.quantity).toFixed(2))')"
+            class="px-2.5 py-1 rounded bg-dark-card border border-dark hover:border-green-500 text-gray-300 hover:text-white transition"
+          >
+            💰 Total = Price * Qty
+          </button>
+          <button 
+            type="button" 
+            onclick="insertFormulaSnippet('record.status === \'Delivered\' ? \'COMPLETED\' : \'PENDING\'')"
+            class="px-2.5 py-1 rounded bg-dark-card border border-dark hover:border-green-500 text-gray-300 hover:text-white transition"
+          >
+            ⚡ Ternary Condition
+          </button>
+          <button 
+            type="button" 
+            onclick="insertFormulaSnippet('\'INV-\' + String(rowIndex).padStart(6, \'0\')')"
+            class="px-2.5 py-1 rounded bg-dark-card border border-dark hover:border-green-500 text-gray-300 hover:text-white transition"
+          >
+            🔢 Padded Code (INV-000001)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="px-6 py-3 border-t border-dark bg-[#2f2f2f] flex justify-end gap-2">
+      <button 
+        type="button" 
+        onclick="closeModal('formula-modal')" 
+        class="px-4 py-1.5 rounded bg-dark-input border border-dark text-gray-300 hover:text-white text-xs font-medium"
+      >
+        Cancel
+      </button>
+      <button 
+        type="button" 
+        onclick="saveFormula()" 
+        class="px-5 py-1.5 rounded bg-primary-green hover:bg-green-600 text-white text-xs font-semibold"
+      >
+        Apply Formula
+      </button>
+    </div>
+
+  </div>
+</div>
