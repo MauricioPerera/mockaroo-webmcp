@@ -1,0 +1,103 @@
+# Mockaroo Static - WebMCP Synthetic Data Generator
+> A 100% client-side, zero-latency synthetic test data generator and schema designer for AI Agents via WebMCP standard.
+
+## CRITICAL INSTRUCTION FOR AI AGENTS
+All tools run **100% inside the browser environment** with zero external network requests.
+To interact with this application:
+1. You MUST open or navigate to the webpage: `https://mauricioperera.github.io/mockaroo-webmcp/` in a browser environment (e.g. Chrome DevTools, Playwright, Puppeteer, or browser extension).
+2. Access the WebMCP runtime on `document.modelContext` or `window.webmcp`.
+3. Execute tools directly via JavaScript:
+   `await document.modelContext.executeTool(toolName, parameters)`
+
+---
+
+## Available WebMCP Tools
+
+### 1. `get_data_types`
+Returns all 69 realistic data generator types categorized with descriptions and examples.
+- **Parameters**:
+  - `category` (string, optional): Filter by category name (e.g., "Person", "Location", "Internet", "Commerce", "Finance", "Numbers", "Date & Time", "Identifiers", "Custom & Logic", "Text").
+- **Example Usage**:
+  ```javascript
+  const types = await document.modelContext.executeTool('get_data_types', { category: 'Finance' });
+  console.log(types);
+  ```
+
+### 2. `list_schemas`
+Lists all available built-in presets (`users`, `ecommerce`, `transactions`, `employees`, `telemetry`) and any custom schemas saved in `localStorage`.
+- **Parameters**: None `{}`
+- **Example Usage**:
+  ```javascript
+  const schemas = await document.modelContext.executeTool('list_schemas', {});
+  console.log(schemas);
+  ```
+
+### 3. `generate_data`
+Generates synthetic mock records directly in browser memory and returns JSON or CSV.
+- **Parameters**:
+  - `count` (number, 1-10000, default: 5): Number of records to generate.
+  - `format` (enum: `"json"` | `"csv"`, default: `"json"`): Output format.
+  - `preset` (string, optional): Name of preset to generate (`"users"`, `"ecommerce"`, `"transactions"`, `"employees"`, `"telemetry"`).
+  - `fields` (array of objects, optional): Custom column specifications `[{ name: string, type: string, blank?: number, formula?: string }]`.
+- **Example Usage**:
+  ```javascript
+  const records = await document.modelContext.executeTool('generate_data', {
+    count: 3,
+    format: 'json',
+    fields: [
+      { name: 'user_id', type: 'uuid_v4' },
+      { name: 'full_name', type: 'full_name' },
+      { name: 'email', type: 'email' },
+      { name: 'salary', type: 'integer' }
+    ]
+  });
+  console.log(records);
+  ```
+
+### 4. `load_schema_in_ui`
+Replaces the currently visible schema in the user interface with a specified preset or custom schema.
+- **Parameters**:
+  - `schema_name` (string, required): Name or ID of the preset (`"users"`, `"ecommerce"`, `"transactions"`, `"employees"`, `"telemetry"`).
+- **Example Usage**:
+  ```javascript
+  await document.modelContext.executeTool('load_schema_in_ui', { schema_name: 'ecommerce' });
+  ```
+
+### 5. `add_field_to_ui`
+Dynamically adds a new column/field row to the table in the user interface.
+- **Parameters**:
+  - `name` (string, required): Column/field name (e.g. `"status"`, `"score"`, `"wallet_address"`).
+  - `type` (string, required): Data generator type key (e.g. `"bitcoin_address"`, `"email"`, `"uuid_v4"`, `"price"`).
+  - `blank` (number, 0-100, optional, default: 0): Percentage of null/blank values.
+  - `formula` (string, optional): Custom JavaScript formula expression.
+- **Example Usage**:
+  ```javascript
+  await document.modelContext.executeTool('add_field_to_ui', {
+    name: 'wallet',
+    type: 'bitcoin_address',
+    blank: 5
+  });
+  ```
+
+### 6. `preview_mock_data`
+Generates 10 sample records from the current schema and opens the Preview modal in the user interface.
+- **Parameters**: None `{}`
+- **Example Usage**:
+  ```javascript
+  await document.modelContext.executeTool('preview_mock_data', {});
+  ```
+
+---
+
+## Declarative Form Integration
+The main schema form in the DOM exposes WebMCP metadata:
+```html
+<form id="schema-form"
+      toolname="generate_mock_dataset"
+      tooldescription="Genera datasets sintéticos personalizados basados en un esquema de columnas, tipos de datos y formato seleccionado"
+      toolparamdescription="num_records: Cantidad de registros (1-50000), format: Formato de salida ('csv', 'json', 'sql', 'excel')">
+```
+
+## Hosted Production URL
+- Web Application: https://mauricioperera.github.io/mockaroo-webmcp/
+- Instructions File: https://mauricioperera.github.io/mockaroo-webmcp/llms.txt

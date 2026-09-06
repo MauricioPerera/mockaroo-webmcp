@@ -87,6 +87,17 @@
 
       <button 
         type="button" 
+        id="btn-copy-agent-prompt"
+        onclick="copyAgentPrompt()" 
+        class="px-3 py-1.5 rounded bg-blue-950/70 hover:bg-blue-900 border border-blue-600 text-xs text-blue-300 font-semibold transition flex items-center gap-1.5 shadow"
+        title="Copiar instrucción simple para tu Agente de IA"
+      >
+        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+        <span id="copy-prompt-btn-text">Copiar Prompt Agente</span>
+      </button>
+
+      <button 
+        type="button" 
         id="btn-open-webmcp"
         class="px-3 py-1.5 rounded bg-purple-950/70 hover:bg-purple-900 border border-purple-600 text-xs text-purple-300 font-semibold transition flex items-center gap-1.5 shadow"
       >
@@ -97,10 +108,13 @@
   </header>
 
   <!-- Notice Banner for Client-Side Architecture -->
-  <div class="bg-gradient-to-r from-emerald-950/40 via-[#2b2b2b] to-purple-950/40 border-b border-[#3c3c3c] px-6 py-2 text-xs flex items-center justify-between text-gray-300">
+  <div class="bg-gradient-to-r from-emerald-950/40 via-[#2b2b2b] to-purple-950/40 border-b border-[#3c3c3c] px-6 py-2 text-xs flex flex-wrap items-center justify-between gap-2 text-gray-300">
     <div class="flex items-center gap-2">
       <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900 text-emerald-300">GitHub Pages Ready</span>
-      <span>Generación en cliente instantánea con Faker.js. Compatible con agentes de IA autónomos mediante WebMCP.</span>
+      <span>Generación en cliente con Faker.js y herramientas WebMCP para agentes de IA.</span>
+      <a href="llms.txt" target="_blank" class="text-blue-400 hover:text-blue-300 underline font-mono text-[11px] ml-1 flex items-center gap-0.5">
+        <span>📄 llms.txt</span>
+      </a>
     </div>
     <div class="flex items-center gap-3 text-[11px] text-gray-400">
       <span>💾 Auto-guarda en localStorage</span>
@@ -499,7 +513,37 @@
         </div>
       </div>
     </div>
-  </div>
+  <!-- Copy Agent Prompt Script -->
+  <script>
+    window.copyAgentPrompt = function() {
+      const promptText = "Lee https://mauricioperera.github.io/mockaroo-webmcp/llms.txt y abre https://mauricioperera.github.io/mockaroo-webmcp/ para usar las herramientas de generación de datos sintéticos mediante WebMCP.";
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(promptText).then(function() {
+          updateCopyButtonText();
+        }).catch(function() {
+          fallbackPrompt(promptText);
+        });
+      } else {
+        fallbackPrompt(promptText);
+      }
+    };
 
+    function updateCopyButtonText() {
+      const btnText = document.getElementById('copy-prompt-btn-text');
+      if (btnText) {
+        const original = btnText.textContent;
+        btnText.textContent = "✓ ¡Copiado!";
+        btnText.classList.add('text-green-300');
+        setTimeout(function() {
+          btnText.textContent = original;
+          btnText.classList.remove('text-green-300');
+        }, 2200);
+      }
+    }
+
+    function fallbackPrompt(text) {
+      window.prompt("Copia la siguiente instrucción para tu Agente de IA:", text);
+    }
+  </script>
 </body>
 </html>
