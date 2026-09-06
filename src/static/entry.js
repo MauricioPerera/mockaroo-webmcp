@@ -1050,6 +1050,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 14. Setup WebMCP Tools & Inspector
   registerWebMcpTools();
+  if (typeof document !== 'undefined' && document.modelContext) {
+    window.modelContext = document.modelContext;
+  }
 
   const btnOpenWebMcp = document.getElementById('btn-open-webmcp');
   if (btnOpenWebMcp) {
