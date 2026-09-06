@@ -1,562 +1,452 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mockaroo Static - Offline Synthetic Test Data Generator & WebMCP for AI Agents</title>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2352a552'/><text x='50%' y='50%' font-size='65' font-weight='900' fill='white' dominant-baseline='central' text-anchor='middle' font-family='sans-serif'>M</text></svg>">
-  
-  <!-- Cleanup any legacy Service Workers from other localhost projects -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        for (let r of registrations) r.unregister();
-      });
-    }
-  </script>
-
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            'primary-green': '#52a552',
-            'primary-green-hover': '#438843',
-            'dark-main': '#2b2b2b',
-            'dark-card': '#383838',
-            'dark-card-hover': '#424242',
-            'dark-input': '#242424',
-            'dark-border': '#4a4a4a',
-          }
-        }
-      }
-    }
-  </script>
-
-  <style>
-    /* Custom Scrollbars */
-    ::-webkit-scrollbar { width: 8px; height: 8px; }
-    ::-webkit-scrollbar-track { background: #242424; }
-    ::-webkit-scrollbar-thumb { background: #4a4a4a; border-radius: 4px; }
-    ::-webkit-scrollbar-thumb:hover { background: #555; }
-    .type-card:hover { transform: translateY(-1px); }
-  </style>
-
-  <!-- SortableJS for Drag-and-Drop -->
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
-
-  <!-- SheetJS for Excel (.xlsx) Generation -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-  <!-- WebMCP window.modelContext bridge for AI Agent compatibility -->
-  <script>
-    Object.defineProperty(window, 'modelContext', {
-      get() { return document.modelContext; },
-      set(v) { document.modelContext = v; },
-      configurable: true
-    });
-  </script>
-
-  <!-- Mockaroo Static Standalone Bundle (Faker.js + FastWebMCP + Zod + Generators) -->
-  <script src="js/mockaroo-static.bundle.js" defer></script>
-</head>
-<body class="bg-[#2b2b2b] text-gray-200 min-h-screen flex flex-col font-sans">
-
-  <!-- Header Bar -->
-  <header class="bg-[#383838] border-b border-[#4a4a4a] px-6 py-3 flex items-center justify-between sticky top-0 z-30 shadow-md">
-    <div class="flex items-center gap-4">
-      <div class="flex items-center gap-2">
-        <!-- Logo SVG -->
-        <div class="bg-primary-green text-white p-1.5 rounded-lg flex items-center justify-center font-black tracking-tighter text-xl leading-none">
-          M
-        </div>
-        <div class="flex items-baseline gap-1.5">
-          <span class="text-2xl font-black tracking-tight text-white font-mono">mockaroo</span>
-          <span class="text-xs px-2 py-0.5 rounded font-bold uppercase tracking-wider bg-purple-900 text-purple-200 border border-purple-700">static + webmcp</span>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mockaroo Static WebMCP — Generador de Datos Sintéticos en tu Navegador</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%2352a552'/><text x='50%' y='50%' font-size='65' font-weight='900' fill='white' dominant-baseline='central' text-anchor='middle' font-family='sans-serif'>M</text></svg>" />
+    <link rel="alternate" type="text/plain" href="./llms.txt" title="LLM & Agent Guidance" />
+    <link rel="stylesheet" href="./css/landing.css" />
+    <script src="./js/landing-i18n.js" defer></script>
+  </head>
+  <body>
+    <!-- Navbar -->
+    <header class="navbar">
+      <div class="nav-container">
+        <a href="./index.html" class="brand">
+          <span class="brand-icon">M</span>
+          <span class="brand-title">mockaroo</span>
+          <span class="brand-badge">STATIC • WEBMCP</span>
+        </a>
+        <nav class="nav-links">
+          <a href="#que-es">¿Qué es?</a>
+          <a href="#herramientas">Herramientas</a>
+          <a href="#ventajas">Ventajas</a>
+          <a href="#como-usar">Guía</a>
+          <a href="#perfiles">Casos de Uso</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+        <div class="nav-actions">
+          <div class="lang-selector" id="lang-selector">
+            <button class="lang-btn active" data-lang="es" title="Español">ES</button>
+            <button class="lang-btn" data-lang="en" title="English">EN</button>
+            <button class="lang-btn" data-lang="pt" title="Português">PT</button>
+          </div>
+          <a href="./app.html" class="btn btn-primary btn-nav" id="nav-btn-gen">
+            <span>📊</span> <span id="txt-nav-open">Abrir Generador</span>
+          </a>
         </div>
       </div>
+    </header>
 
-      <span class="text-gray-500">|</span>
-      <span class="text-xs text-gray-400 hidden md:inline">100% In-Browser Synthetic Data & AI Agent WebMCP Standard</span>
-    </div>
+    <!-- Hero Section -->
+    <section class="hero-section">
+      <div class="hero-container">
+        <div class="hero-pill">
+          <span class="pill-sparkle">✨</span>
+          <span>Generador de Datos Sintéticos • 100% In-Browser</span>
+        </div>
+        <h1 class="hero-title">
+          Datos realistas para tus pruebas, prototipos y agentes de IA. <br class="desktop-only" />
+          <span class="gradient-text">Sin servidores ni límites de pago.</span>
+        </h1>
+        <p class="hero-subtitle">
+          Impulsado por Faker.js y FastWebMCP. Genera hasta 10.000 registros en CSV, JSON, SQL y Excel directamente en tu navegador. Sin enviar información sensible a la nube y con 6 herramientas nativas WebMCP para que los Agentes de IA creen fixtures al instante.
+        </p>
 
-    <!-- Top Right Actions -->
-    <div class="flex items-center gap-2">
-      <button 
-        type="button" 
-        id="btn-open-presets"
-        class="px-3 py-1.5 rounded bg-[#2a2a2a] hover:bg-[#444] border border-[#4a4a4a] text-xs text-gray-200 font-medium transition flex items-center gap-1.5"
-      >
-        <svg class="w-4 h-4 text-primary-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-        <span>Templates (<span id="active-preset-name">Users</span>)</span>
-      </button>
-
-      <button 
-        type="button" 
-        id="btn-copy-agent-prompt"
-        onclick="copyAgentPrompt()" 
-        class="px-3 py-1.5 rounded bg-blue-950/70 hover:bg-blue-900 border border-blue-600 text-xs text-blue-300 font-semibold transition flex items-center gap-1.5 shadow"
-        title="Copiar instrucción simple para tu Agente de IA"
-      >
-        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-        <span id="copy-prompt-btn-text">Copiar Prompt Agente</span>
-      </button>
-
-      <button 
-        type="button" 
-        id="btn-open-webmcp"
-        class="px-3 py-1.5 rounded bg-purple-950/70 hover:bg-purple-900 border border-purple-600 text-xs text-purple-300 font-semibold transition flex items-center gap-1.5 shadow"
-      >
-        <svg class="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-        <span>WebMCP (6 Tools)</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Notice Banner for Client-Side Architecture -->
-  <div class="bg-gradient-to-r from-emerald-950/40 via-[#2b2b2b] to-purple-950/40 border-b border-[#3c3c3c] px-6 py-2 text-xs flex flex-wrap items-center justify-between gap-2 text-gray-300">
-    <div class="flex items-center gap-2">
-      <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-900 text-emerald-300">GitHub Pages Ready</span>
-      <span>Generación en cliente con Faker.js y herramientas WebMCP para agentes de IA.</span>
-      <a href="llms.txt" target="_blank" class="text-blue-400 hover:text-blue-300 underline font-mono text-[11px] ml-1 flex items-center gap-0.5">
-        <span>📄 llms.txt</span>
-      </a>
-    </div>
-    <div class="flex items-center gap-3 text-[11px] text-gray-400">
-      <span>💾 Auto-guarda en localStorage</span>
-      <span>⚡ 0 peticiones de red</span>
-    </div>
-  </div>
-
-  <!-- Main Workspace -->
-  <main class="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 flex flex-col">
-    
-    <!-- Schema Form with Declarative WebMCP Attributes -->
-    <form 
-      id="schema-form" 
-      toolname="generate_mock_dataset"
-      tooldescription="Genera datasets sintéticos personalizados basados en un esquema de columnas, tipos de datos y formato seleccionado"
-      toolparamdescription="num_records: Cantidad de registros (1-50000), format: Formato de salida ('csv', 'json', 'sql', 'excel')"
-      class="flex-1 flex flex-col"
-    >
-      
-      <!-- Table Card -->
-      <div class="bg-[#383838] border border-[#4a4a4a] rounded-lg shadow-xl overflow-hidden flex-1 flex flex-col mb-4">
-        
-        <!-- Table Header Info -->
-        <div class="bg-[#303030] px-4 py-3 border-b border-[#4a4a4a] flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <h2 class="text-sm font-bold text-gray-200 tracking-wide uppercase">Schema Columns</h2>
-            <span class="text-xs text-gray-400">(Drag rows using handle to reorder)</span>
-          </div>
-          <button 
-            type="button" 
-            id="btn-add-field"
-            class="px-3 py-1.5 rounded bg-primary-green hover:bg-primary-green-hover text-white text-xs font-semibold shadow transition flex items-center gap-1"
-          >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-            <span>Add another field</span>
-          </button>
+        <div class="hero-cta-group">
+          <a href="./app.html" class="btn btn-hero-primary">
+            <span class="cta-icon">📊</span>
+            <div class="cta-text">
+              <strong>Abrir Mockaroo WebMCP</strong>
+              <span>Diseñador de esquemas, fórmulas JS y exportación multiformato</span>
+            </div>
+          </a>
+          <a href="https://mauricioperera.github.io/webmcp-sqlite-studio/" target="_blank" rel="noopener" class="btn btn-hero-secondary">
+            <span class="cta-icon">🗄️</span>
+            <div class="cta-text">
+              <strong>WebMCP SQLite Studio</strong>
+              <span>Base de datos relacional WASM en memoria</span>
+            </div>
+          </a>
+          <a href="https://mauricioperera.github.io/webmcp-code-studio/" target="_blank" rel="noopener" class="btn btn-hero-secondary">
+            <span class="cta-icon">💻</span>
+            <div class="cta-text">
+              <strong>WebMCP Code Studio</strong>
+              <span>IDE web completo con VFS y terminal Unix</span>
+            </div>
+          </a>
         </div>
 
-        <!-- Table Structure -->
-        <div class="overflow-x-auto flex-1">
-          <table class="w-full text-left border-collapse" id="fields-table">
+        <!-- Capabilities Bar -->
+        <div class="capabilities-bar">
+          <div class="cap-item"><span class="cap-dot green"></span> <strong>0 Instalación:</strong> Abre el navegador y genera datos en 1 segundo</div>
+          <div class="cap-item"><span class="cap-dot green"></span> <strong>100% Privado:</strong> Tus esquemas y registros nunca salen de tu máquina</div>
+          <div class="cap-item"><span class="cap-dot green"></span> <strong>$0 Costo:</strong> Sin límites de 200 filas gratis ni planes de suscripción</div>
+          <div class="cap-item"><span class="cap-dot green"></span> <strong>Ultra Rápido:</strong> 10.000 filas generadas en memoria en &lt;100 ms</div>
+        </div>
+
+        <!-- Interactive Live Showcase Preview -->
+        <div class="showcase-container">
+          <div class="showcase-header">
+            <div class="window-dots">
+              <span class="dot red"></span>
+              <span class="dot yellow"></span>
+              <span class="dot green"></span>
+            </div>
+            <span class="window-title">mockaroo-static-engine -- In-Memory Faker Runtime</span>
+            <div class="wasm-live-badge">⚡ Faker.js Client • 0.28 ms • 4 registros</div>
+          </div>
+          <div class="showcase-body">
+            <div class="showcase-toolbar">
+              <div class="template-chips">
+                <button class="template-chip active" data-template="users">👤 Usuarios</button>
+                <button class="template-chip" data-template="orders">📦 Órdenes</button>
+                <button class="template-chip" data-template="transactions">💳 Transacciones</button>
+              </div>
+              <button class="btn-regen" id="btn-showcase-regen">
+                <span>🔄</span> Regenerar Muestra
+              </button>
+            </div>
+            <div class="preview-table-wrapper">
+              <table class="preview-table" id="showcase-preview-table">
+                <!-- Dynamically populated via landing-i18n.js -->
+              </table>
+            </div>
+            <div class="showcase-footer">
+              <span id="txt-showcase-meta">Generación en cliente sin peticiones de red • Latencia: 0.28 ms</span>
+              <span class="text-green font-mono">Formatos: CSV • JSON • SQL • XLSX</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Paradigm Shift Section -->
+    <section class="section section-dark" id="que-es">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag">EL CAMBIO DE PARADIGMA</span>
+          <h2 class="section-title">¿Por qué generar datos sintéticos en el navegador cambia las reglas?</h2>
+          <p class="section-subtitle">
+            Los generadores de datos tradicionales en la nube limitan severamente las cuentas gratuitas, requieren crear cuentas y exponen tus esquemas a servidores remotos.
+          </p>
+        </div>
+
+        <div class="paradigm-grid">
+          <div class="paradigm-card old">
+            <span class="card-status-badge old">El Enfoque Tradicional en la Nube</span>
+            <h3>Antes: Límites Estrictos, Costos y Riesgo de Datos</h3>
+            <ul class="paradigm-list">
+              <li>❌ <strong>Límites mezquinos:</strong> La versión gratuita de Mockaroo.com corta las descargas a solo 200 o 1.000 registros por día.</li>
+              <li>❌ <strong>Suscripciones costosas:</strong> Planes mensuales de $50 a más de $500/año para proyectos de pruebas continuas.</li>
+              <li>❌ <strong>Pérdida de privacidad:</strong> Nombres de columnas, estructuras de esquemas y lógica de negocio se envían a servidores de terceros.</li>
+              <li>❌ <strong>Aislamiento de la IA:</strong> Los modelos de lenguaje no pueden interactuar directamente con la interfaz para generar datos.</li>
+            </ul>
+          </div>
+
+          <div class="paradigm-card new">
+            <span class="card-status-badge new">La Revolución WebMCP (Local-First)</span>
+            <h3>Ahora: Generación Ilimitada, 100% Local y con IA</h3>
+            <ul class="paradigm-list">
+              <li>✅ <strong>10.000 registros por clic:</strong> Genera volúmenes masivos de datos sintéticos sin topes artificiales ni bloqueos diarios.</li>
+              <li>✅ <strong>100% Gratuito y Open Source ($0):</strong> Corre enteramente sobre el hardware de tu dispositivo; sin costos de infraestructura.</li>
+              <li>✅ <strong>Soberanía total:</strong> Tus datos se calculan en la memoria RAM del navegador y nunca salen de tu computadora.</li>
+              <li>✅ <strong>6 Herramientas WebMCP para Agentes:</strong> Claude, ChatGPT y agentes autónomos manipulan esquemas y generan datasets en vivo.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 WebMCP Tools Section -->
+    <section class="section" id="herramientas">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag">ESTÁNDAR W3C WEBMCP</span>
+          <h2 class="section-title">6 Herramientas Nativas para Agentes de Inteligencia Artificial</h2>
+          <p class="section-subtitle">
+            A través de window.modelContext y FastWebMCP, los modelos de lenguaje pueden diseñar esquemas y producir fixtures de prueba de forma completamente autónoma.
+          </p>
+        </div>
+
+        <div class="tools-grid">
+          <div class="tool-card">
+            <div class="tool-card-icon">📚</div>
+            <div class="tool-card-title">get_data_types</div>
+            <span class="tool-card-badge readonly">readOnly: true</span>
+            <p>Catálogo completo de 69 tipos de generadores (Personas, Ubicación, Finanzas, Internet, Fechas, Números y Lógica).</p>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-card-icon">📋</div>
+            <div class="tool-card-title">list_schemas</div>
+            <span class="tool-card-badge readonly">readOnly: true</span>
+            <p>Inspecciona los presets predefinidos (users, ecommerce, transactions, employees, telemetry) y esquemas guardados.</p>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-card-icon">⚡</div>
+            <div class="tool-card-title">generate_data</div>
+            <span class="tool-card-badge write">producción</span>
+            <p>Herramienta principal de producción: devuelve datasets sintéticos estructurados en JSON o CSV en memoria.</p>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-card-icon">🔄</div>
+            <div class="tool-card-title">load_schema_in_ui</div>
+            <span class="tool-card-badge write">sincronización UI</span>
+            <p>Carga y visualiza una plantilla directamente en la tabla interactiva de la interfaz para revisión humana.</p>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-card-icon">➕</div>
+            <div class="tool-card-title">add_field_to_ui</div>
+            <span class="tool-card-badge write">mutación UI</span>
+            <p>Añade dinámicamente columnas, configuraciones de nulos (% blanks) y fórmulas JavaScript a la UI activa.</p>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-card-icon">👁️</div>
+            <div class="tool-card-title">preview_mock_data</div>
+            <span class="tool-card-badge write">modal visual</span>
+            <p>Dispara la ventana modal de previsualización con 10 registros de muestra para verificación visual.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison Matrix Section -->
+    <section class="section section-dark" id="ventajas">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag">TABLA COMPARATIVA</span>
+          <h2 class="section-title">Mockaroo WebMCP frente a las Alternativas</h2>
+          <p class="section-subtitle">
+            Compara objetivamente las capacidades de generación local frente a servicios en la nube, scripts manuales y hojas de cálculo.
+          </p>
+        </div>
+
+        <div class="comparison-wrapper">
+          <table class="comparison-table">
             <thead>
-              <tr class="border-b border-[#4a4a4a] bg-[#2d2d2d] text-gray-400 text-xs uppercase tracking-wider font-mono">
-                <th class="py-2.5 px-3 w-10 text-center select-none"></th>
-                <th class="py-2.5 px-3 font-semibold w-1/4">Field Name</th>
-                <th class="py-2.5 px-3 font-semibold w-2/5">Type</th>
-                <th class="py-2.5 px-3 font-semibold w-28 text-center">Options (fx)</th>
-                <th class="py-2.5 px-3 font-semibold w-28 text-center">Blank %</th>
-                <th class="py-2.5 px-3 font-semibold w-12 text-center select-none"></th>
+              <tr>
+                <th>Característica</th>
+                <th class="col-highlight">Mockaroo WebMCP</th>
+                <th>Mockaroo Cloud</th>
+                <th>Faker.js / Scripts</th>
+                <th>Excel / Hojas de Cálculo</th>
               </tr>
             </thead>
-            <tbody id="fields-container" class="divide-y divide-[#333333]">
-              <!-- Dynamically populated rows -->
+            <tbody>
+              <tr>
+                <td class="feature-title">Límite de Registros</td>
+                <td class="col-highlight">Hasta 10.000 por clic (Sin límite)</td>
+                <td>200 filas/día (Gratis)</td>
+                <td>Limitado por tu script</td>
+                <td>Manual y propenso a fatiga</td>
+              </tr>
+              <tr>
+                <td class="feature-title">Costo Mensual</td>
+                <td class="col-highlight">$0 (Open Source)</td>
+                <td>$50 a $500/año</td>
+                <td>$0 (pero alto tiempo dev)</td>
+                <td>Licencia Office / Workspace</td>
+              </tr>
+              <tr>
+                <td class="feature-title">Privacidad de Datos</td>
+                <td class="col-highlight">100% In-Browser (RAM Local)</td>
+                <td>Se envía a servidores remotos</td>
+                <td>Local</td>
+                <td>Local o Nube cerrada</td>
+              </tr>
+              <tr>
+                <td class="feature-title">Integración Agentes IA</td>
+                <td class="col-highlight">Nativa WebMCP (6 Tools)</td>
+                <td>Ninguna</td>
+                <td>Requiere crear wrappers</td>
+                <td>Ninguna</td>
+              </tr>
+              <tr>
+                <td class="feature-title">Formatos de Exportación</td>
+                <td class="col-highlight">CSV, JSON, SQL, Excel (.xlsx)</td>
+                <td>CSV, JSON, SQL, Excel</td>
+                <td>Requiere dependencias extra</td>
+                <td>Solo XLS / CSV</td>
+              </tr>
+              <tr>
+                <td class="feature-title">Fórmulas Dinámicas</td>
+                <td class="col-highlight">JavaScript puro en cliente</td>
+                <td>Sandbox Ruby en servidor</td>
+                <td>Programación en código</td>
+                <td>Fórmulas Excel estándar</td>
+              </tr>
             </tbody>
           </table>
         </div>
-
       </div>
+    </section>
 
-      <!-- Generator Controls & Format Options -->
-      <div class="bg-[#383838] border border-[#4a4a4a] rounded-lg p-4 shadow-lg flex flex-col gap-4">
-        
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <!-- Count & Format -->
-          <div class="flex flex-wrap items-center gap-4">
-            <div class="flex items-center gap-2">
-              <label for="num_records" class="text-xs font-semibold uppercase text-gray-300"># Rows:</label>
-              <input 
-                type="number" 
-                id="num_records" 
-                name="num_records" 
-                min="1" 
-                max="10000" 
-                step="1"
-                value="100" 
-                class="w-24 bg-[#242424] border border-[#4a4a4a] focus:border-primary-green focus:ring-1 focus:ring-primary-green rounded px-2 py-1 text-sm text-gray-100 font-mono text-center"
-              />
-            </div>
-
-            <div class="flex items-center gap-2">
-              <label for="format_type" class="text-xs font-semibold uppercase text-gray-300">Format:</label>
-              <select 
-                id="format_type" 
-                name="format" 
-                class="bg-[#242424] border border-[#4a4a4a] focus:border-primary-green rounded px-3 py-1 text-sm text-gray-100 font-medium cursor-pointer"
-              >
-                <option value="csv" selected>CSV (Comma Separated)</option>
-                <option value="json">JSON</option>
-                <option value="sql">SQL (INSERT Statements)</option>
-                <option value="excel">Excel (.xlsx)</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Action Buttons -->
-          <div class="flex items-center gap-3">
-            <button 
-              type="button" 
-              id="btn-preview"
-              class="px-4 py-2 rounded bg-[#242424] hover:bg-[#303030] border border-[#555] hover:border-gray-400 text-sm font-semibold text-gray-200 transition flex items-center gap-1.5"
-            >
-              <svg class="w-4 h-4 text-primary-green" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-              <span>Preview (10 rows)</span>
-            </button>
-
-            <button 
-              type="button" 
-              id="btn-download"
-              class="px-6 py-2 rounded bg-primary-green hover:bg-primary-green-hover text-white text-sm font-bold shadow-lg transition flex items-center gap-2 active:scale-95"
-            >
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-              <span>Generate & Download</span>
-            </button>
-          </div>
+    <!-- User Personas Section -->
+    <section class="section" id="perfiles">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag">ADAPTADO A TU TRABAJO</span>
+          <h2 class="section-title">¿Quién se beneficia de la Generación Sintética Local?</h2>
+          <p class="section-subtitle">
+            Desde control de calidad y ciencia de datos hasta desarrollo ágil y formación técnica.
+          </p>
         </div>
 
-        <!-- Format Options Drawers -->
-        <!-- CSV Options -->
-        <div id="csv-options" class="flex flex-wrap items-center gap-6 pt-3 border-t border-[#444] text-xs text-gray-300">
-          <div class="flex items-center gap-2">
-            <label class="text-gray-400">Delimiter:</label>
-            <select id="csv_delimiter" class="bg-[#242424] border border-[#4a4a4a] rounded px-2 py-0.5 text-xs text-gray-200">
-              <option value="," selected>Comma (,)</option>
-              <option value=";">Semicolon (;)</option>
-              <option value="&#9;">Tab (\t)</option>
-              <option value="|">Pipe (|)</option>
-            </select>
-          </div>
-
-          <label class="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" id="csv_header" checked class="rounded bg-[#242424] border-gray-600 text-primary-green focus:ring-0">
-            <span>Include Header Row</span>
-          </label>
-
-          <label class="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" id="csv_bom" class="rounded bg-[#242424] border-gray-600 text-primary-green focus:ring-0">
-            <span>UTF-8 BOM (Excel compatible)</span>
-          </label>
+        <div class="role-tabs">
+          <button class="role-tab active" data-role="qa">🧪 QA & Testers</button>
+          <button class="role-tab" data-role="data">📊 Data Science & ML</button>
+          <button class="role-tab" data-role="dev">💻 Desarrolladores</button>
+          <button class="role-tab" data-role="edu">🎓 Docentes y Estudiantes</button>
         </div>
 
-        <!-- JSON Options -->
-        <div id="json-options" class="hidden flex-wrap items-center gap-6 pt-3 border-t border-[#444] text-xs text-gray-300">
-          <label class="flex items-center gap-1.5 cursor-pointer">
-            <input type="checkbox" id="json_minify" class="rounded bg-[#242424] border-gray-600 text-primary-green focus:ring-0">
-            <span>Minify Output (Single line)</span>
-          </label>
-        </div>
-
-        <!-- SQL Options -->
-        <div id="sql-options" class="hidden flex-wrap items-center gap-6 pt-3 border-t border-[#444] text-xs text-gray-300">
-          <div class="flex items-center gap-2">
-            <label class="text-gray-400">Table Name:</label>
-            <input type="text" id="sql_table_name" value="mock_data" class="bg-[#242424] border border-[#4a4a4a] rounded px-2 py-0.5 text-xs text-gray-200 w-32 font-mono">
-          </div>
-
-          <div class="flex items-center gap-2">
-            <label class="text-gray-400">SQL Dialect:</label>
-            <select id="sql_dialect" class="bg-[#242424] border border-[#4a4a4a] rounded px-2 py-0.5 text-xs text-gray-200">
-              <option value="postgres" selected>PostgreSQL</option>
-              <option value="mysql">MySQL</option>
-              <option value="sqlite">SQLite</option>
-            </select>
-          </div>
-        </div>
-
-      </div>
-
-    </form>
-  </main>
-
-  <!-- Footer -->
-  <footer class="bg-[#222222] border-t border-[#383838] px-6 py-2.5 text-center text-xs text-gray-400 flex items-center justify-between">
-    <div class="flex items-center gap-2">
-      <span class="text-primary-green font-bold">Mockaroo Static + FastWebMCP</span>
-      <span>&mdash; 100% Client-side Open Source Synthetic Generator</span>
-    </div>
-    <div class="flex items-center gap-4 text-gray-400">
-      <span>69 Data Types</span>
-      <span>&bull;</span>
-      <span>No limits, no quotas</span>
-    </div>
-  </footer>
-
-  <!-- ==================== MODALS ==================== -->
-
-  <!-- 1. Type Picker Modal (69 Types) -->
-  <div id="type-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-    <div class="bg-[#383838] border border-[#4a4a4a] rounded-xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-      <div class="bg-[#303030] px-6 py-4 border-b border-[#4a4a4a] flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-bold text-white">Choose a Data Type</h3>
-          <p class="text-xs text-gray-400" id="type-results-count">69 realistic types available across 10 categories</p>
-        </div>
-        <button type="button" onclick="closeModal('type-modal')" class="text-gray-400 hover:text-white p-1 rounded hover:bg-[#444] transition">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-      </div>
-
-      <!-- Search Input -->
-      <div class="p-4 border-b border-[#4a4a4a] bg-[#2b2b2b]">
-        <div class="relative">
-          <svg class="w-4 h-4 text-gray-400 absolute left-3 top-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-          <input 
-            type="text" 
-            id="type-search" 
-            placeholder="Search types by name, category, or description (e.g. credit, email, uuid)..." 
-            class="w-full bg-[#242424] border border-[#4a4a4a] focus:border-primary-green focus:ring-1 focus:ring-primary-green rounded-lg pl-9 pr-4 py-2 text-sm text-gray-100 placeholder-gray-500 transition"
-          />
-        </div>
-      </div>
-
-      <!-- Types Catalog Grid -->
-      <div class="p-6 overflow-y-auto flex-1">
-        <div id="type-catalog-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 2. Formula Modal -->
-  <div id="formula-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4">
-    <div class="bg-[#383838] border border-[#4a4a4a] rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden">
-      <div class="bg-[#303030] px-6 py-4 border-b border-[#4a4a4a] flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-bold text-white">Formula Calculation (fx)</h3>
-          <p class="text-xs text-gray-400">Editing formula for <span id="formula-field-name" class="font-mono text-green-400 font-bold"></span></p>
-        </div>
-        <button type="button" onclick="closeModal('formula-modal')" class="text-gray-400 hover:text-white p-1 rounded hover:bg-[#444]">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-      </div>
-
-      <div class="p-6 flex flex-col gap-4">
-        <div>
-          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">Available Column Variables (Click to insert):</label>
-          <div id="formula-columns-chips" class="flex flex-wrap gap-1.5 p-2 bg-[#242424] border border-[#4a4a4a] rounded-lg min-h-[38px]">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-gray-300 uppercase mb-1">JavaScript Expression:</label>
-          <textarea 
-            id="formula-editor-textarea" 
-            rows="4" 
-            placeholder="e.g. record.first_name.toLowerCase() + '.' + record.last_name.toLowerCase() + '@company.com'"
-            class="w-full bg-[#242424] border border-[#4a4a4a] focus:border-primary-green focus:ring-1 focus:ring-primary-green rounded-lg p-3 text-sm font-mono text-gray-100 placeholder-gray-500"
-          ></textarea>
-        </div>
-
-        <div class="bg-[#2a2a2a] border border-[#444] rounded p-3 text-xs text-gray-400">
-          <p class="font-semibold text-gray-300 mb-1">💡 Tips:</p>
-          <ul class="list-disc pl-4 space-y-0.5">
-            <li>Formulas evaluate in a second pass with full access to all other generated columns.</li>
-            <li>Examples: <code class="text-green-400">record.first_name.toUpperCase()</code> or <code class="text-green-400">record.price * record.quantity</code></li>
+        <div class="role-detail-card">
+          <!-- Populated by landing-i18n.js -->
+          <h3>Ingenieros de Calidad y Especialistas en Testing</h3>
+          <p class="role-quote">«Puedo generar 5.000 registros con un 15% de valores nulos y formatos extremos para probar la resiliencia de formularios en segundos.»</p>
+          <ul class="role-points">
+            <li>Configuración granular de porcentajes de campos vacíos (blanks %) para validar validadores de frontend.</li>
+            <li>Exportación directa en formato Excel (.xlsx) y CSV con codificación UTF-8 para cargar en suites de testing.</li>
+            <li>Simulación de nombres exóticos, correos alfanuméricos y números de tarjeta para pruebas de penetración y carga.</li>
           </ul>
+          <div class="role-highlight-box">
+            <strong>Ahorro de Tiempo:</strong> <span>De 2 horas creando datos manuales a 3 clics en el navegador</span>
+          </div>
         </div>
       </div>
+    </section>
 
-      <div class="bg-[#303030] px-6 py-3 border-t border-[#4a4a4a] flex items-center justify-end gap-2">
-        <button type="button" onclick="closeModal('formula-modal')" class="px-4 py-2 rounded bg-[#242424] hover:bg-[#444] text-xs font-semibold text-gray-300 transition">
-          Cancel
-        </button>
-        <button type="button" id="btn-save-formula" class="px-5 py-2 rounded bg-primary-green hover:bg-primary-green-hover text-white text-xs font-bold transition">
-          Save Formula
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 3. Preview Modal -->
-  <div id="preview-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-    <div class="bg-[#383838] border border-[#4a4a4a] rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
-      <div class="bg-[#303030] px-6 py-4 border-b border-[#4a4a4a] flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-bold text-white">Dataset Preview</h3>
-          <p class="text-xs text-gray-400" id="preview-record-count">10 records generated</p>
+    <!-- FAQ Section -->
+    <section class="section section-dark" id="faq">
+      <div class="container">
+        <div class="section-header text-center">
+          <span class="section-tag">RESOLVEMOS TUS DUDAS</span>
+          <h2 class="section-title">Preguntas Frecuentes</h2>
+          <p class="section-subtitle">
+            Todo lo que necesitas saber sobre la tecnología, privacidad y capacidades de Mockaroo Static WebMCP.
+          </p>
         </div>
-        <div class="flex items-center gap-2">
-          <button type="button" onclick="document.getElementById('preview-table-container').classList.toggle('hidden'); document.getElementById('preview-raw-json').classList.toggle('hidden');" class="px-3 py-1 bg-[#242424] hover:bg-[#444] border border-[#4a4a4a] text-xs text-gray-300 rounded">
-            Toggle JSON / Table View
-          </button>
-          <button type="button" onclick="closeModal('preview-modal')" class="text-gray-400 hover:text-white p-1 rounded hover:bg-[#444]">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-          </button>
-        </div>
-      </div>
 
-      <div class="overflow-auto flex-1 p-4 bg-[#2b2b2b]">
-        <div id="preview-table-container" class="rounded border border-[#4a4a4a] overflow-hidden">
-          <!-- Populated by JS -->
-        </div>
-        <pre id="preview-raw-json" class="hidden text-xs font-mono text-green-400 bg-[#1e1e1e] p-4 rounded border border-[#4a4a4a] overflow-auto max-h-[60vh]"></pre>
-      </div>
-
-      <div class="bg-[#303030] px-6 py-3 border-t border-[#4a4a4a] flex justify-end">
-        <button type="button" onclick="closeModal('preview-modal')" class="px-4 py-1.5 bg-[#242424] hover:bg-[#444] border border-[#555] rounded text-xs text-gray-200">
-          Close Preview
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 4. Presets Modal -->
-  <div id="presets-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-    <div class="bg-[#383838] border border-[#4a4a4a] rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col overflow-hidden">
-      <div class="bg-[#303030] px-6 py-4 border-b border-[#4a4a4a] flex items-center justify-between">
-        <div>
-          <h3 class="text-base font-bold text-white">Schema Templates & Presets</h3>
-          <p class="text-xs text-gray-400">Stored in your browser (localStorage)</p>
-        </div>
-        <button type="button" onclick="closeModal('presets-modal')" class="text-gray-400 hover:text-white p-1 rounded hover:bg-[#444]">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-      </div>
-
-      <div class="p-6 overflow-y-auto flex-1 flex flex-col gap-4">
-        <div class="flex items-center justify-between gap-2">
-          <button type="button" id="btn-save-current-schema" class="px-3 py-1.5 bg-[#242424] hover:bg-[#444] border border-primary-green text-green-400 text-xs font-bold rounded flex items-center gap-1">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
-            <span>Save Current Schema</span>
-          </button>
-          <div class="flex items-center gap-2">
-            <button type="button" id="btn-export-schemas" class="px-3 py-1.5 bg-[#242424] hover:bg-[#444] border border-[#555] text-xs text-gray-300 rounded">
-              Export JSON
+        <div class="faq-grid">
+          <!-- Q1 -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>¿En qué se diferencia de la versión original de Mockaroo.com?</span>
+              <span class="faq-chevron">&#9662;</span>
             </button>
-            <button type="button" id="btn-import-schemas" class="px-3 py-1.5 bg-[#242424] hover:bg-[#444] border border-[#555] text-xs text-gray-300 rounded">
-              Import JSON
+            <div class="faq-answer">
+              <p>Mockaroo.com original corre sobre servidores remotos y limita severamente las cuentas gratuitas a 200 registros por día, requiriendo planes de pago de hasta $500/año para más volumen. <strong>Mockaroo Static corre 100% en tu navegador</strong> vía Faker.js: es ilimitado, 100% gratuito ($0), no requiere registro y ofrece integración nativa con Agentes de IA vía WebMCP.</p>
+            </div>
+          </div>
+
+          <!-- Q2 -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>¿Mis datos o esquemas se envían a algún servidor externo?</span>
+              <span class="faq-chevron">&#9662;</span>
             </button>
-            <input type="file" id="file-import-schemas" accept=".json" class="hidden">
-          </div>
-        </div>
-
-        <div id="presets-list-container" class="space-y-3">
-          <!-- Populated by JS -->
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- 5. WebMCP Inspector Modal -->
-  <div id="webmcp-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-    <div class="bg-[#383838] border border-[#4a4a4a] rounded-xl shadow-2xl w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden">
-      <div class="bg-[#303030] px-6 py-4 border-b border-[#4a4a4a] flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="w-3 h-3 rounded-full bg-purple-500 animate-ping"></div>
-          <div>
-            <h3 class="text-base font-bold text-white flex items-center gap-2">
-              <span>WebMCP Agent Protocol</span>
-              <span class="text-xs font-mono font-normal bg-purple-900 text-purple-200 px-2 py-0.5 rounded">FastWebMCP Standard</span>
-            </h3>
-            <p class="text-xs text-gray-400">Permite a agentes de IA autónomos interactuar programáticamente con esta web</p>
-          </div>
-        </div>
-        <button type="button" onclick="closeModal('webmcp-modal')" class="text-gray-400 hover:text-white p-1 rounded hover:bg-[#444]">
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-        </button>
-      </div>
-
-      <div class="p-6 overflow-y-auto flex-1 grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Tools Registered -->
-        <div class="space-y-3">
-          <h4 class="text-xs font-bold text-purple-300 uppercase tracking-wider">Registered Tools (document.modelContext)</h4>
-          <div id="webmcp-tools-list" class="space-y-3">
-            <!-- Populated by JS -->
-          </div>
-        </div>
-
-        <!-- Interactive Runner Console -->
-        <div class="bg-[#242424] border border-[#4a4a4a] rounded-lg p-4 flex flex-col gap-3">
-          <h4 class="text-xs font-bold text-gray-300 uppercase tracking-wider flex items-center justify-between">
-            <span>Live Interactive Test Runner</span>
-            <span class="text-[10px] text-green-400 font-mono">Ready</span>
-          </h4>
-
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Select Tool to Test:</label>
-            <select id="runner-tool-select" class="w-full bg-[#303030] border border-[#555] rounded px-3 py-1.5 text-xs text-purple-300 font-mono">
-              <!-- Populated by JS -->
-            </select>
+            <div class="faq-answer">
+              <p><strong>Absolutamente no.</strong> Toda la generación ocurre en la memoria RAM de tu computadora utilizando el motor JavaScript del navegador. Ninguna fila, columna o esquema generado viaja por internet.</p>
+            </div>
           </div>
 
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Input Parameters (JSON):</label>
-            <textarea id="runner-tool-params" rows="5" class="w-full bg-[#1e1e1e] border border-[#444] rounded p-2 text-xs font-mono text-green-300"></textarea>
+          <!-- Q3 -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>¿Qué formatos de descarga están disponibles?</span>
+              <span class="faq-chevron">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+              <p>Puedes exportar en <strong>CSV</strong> (con delimitadores configurables), <strong>JSON</strong> (indentado o compacto), <strong>SQL</strong> (con sentencias INSERT INTO parametrizadas por tabla) y <strong>Excel (.xlsx)</strong> nativo generado directamente con SheetJS.</p>
+            </div>
           </div>
 
-          <button type="button" id="btn-execute-runner-tool" class="w-full py-2 rounded bg-purple-700 hover:bg-purple-600 text-white font-bold text-xs shadow transition">
-            Execute Tool in Browser &rarr;
-          </button>
+          <!-- Q4 -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>¿Cómo interactúa un Agente de IA con esta herramienta?</span>
+              <span class="faq-chevron">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+              <p>Mockaroo Static registra 6 herramientas en <code>window.modelContext</code> / <code>document.modelContext</code> conforme al estándar W3C WebMCP. Los agentes de IA pueden consultar tipos de datos disponibles, cargar esquemas, añadir campos y generar arrays de datos sin necesidad de intervención humana.</p>
+            </div>
+          </div>
 
-          <div>
-            <label class="block text-xs text-gray-400 mb-1">Execution Output:</label>
-            <pre id="runner-tool-output" class="bg-[#181818] border border-[#333] rounded p-3 text-[11px] font-mono text-gray-300 overflow-auto max-h-48 whitespace-pre-wrap">Results will appear here...</pre>
+          <!-- Q5 -->
+          <div class="faq-item">
+            <button class="faq-question">
+              <span>¿Cómo se complementa con SQLite Studio y Code Studio?</span>
+              <span class="faq-chevron">&#9662;</span>
+            </button>
+            <div class="faq-answer">
+              <p>Forman una <strong>Trilogía WebMCP integral</strong>: puedes diseñar y generar datos sintéticos en Mockaroo, importarlos a <strong>WebMCP SQLite Studio</strong> con un clic para analizarlos con SQL relacional en memoria, y construir aplicaciones interactivas en <strong>WebMCP Code Studio</strong> con su VFS y terminal Unix.</p>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  <!-- Copy Agent Prompt Script -->
-  <script>
-    window.copyAgentPrompt = function() {
-      const promptText = "Lee https://mauricioperera.github.io/mockaroo-webmcp/llms.txt y abre https://mauricioperera.github.io/mockaroo-webmcp/ para usar las herramientas de generación de datos sintéticos mediante WebMCP.";
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(promptText).then(function() {
-          updateCopyButtonText();
-        }).catch(function() {
-          fallbackPrompt(promptText);
-        });
-      } else {
-        fallbackPrompt(promptText);
-      }
-    };
+    </section>
 
-    function updateCopyButtonText() {
-      const btnText = document.getElementById('copy-prompt-btn-text');
-      if (btnText) {
-        const original = btnText.textContent;
-        btnText.textContent = "✓ ¡Copiado!";
-        btnText.classList.add('text-green-300');
-        setTimeout(function() {
-          btnText.textContent = original;
-          btnText.classList.remove('text-green-300');
-        }, 2200);
-      }
-    }
+    <!-- Bottom CTA Banner -->
+    <section class="cta-banner">
+      <div class="container">
+        <h2 class="cta-banner-title">¿Listo para generar datos de prueba sin límites?</h2>
+        <p class="cta-banner-subtitle">
+          Crea esquemas completos, añade fórmulas personalizadas y descarga miles de registros en segundos. 100% gratis y privado.
+        </p>
+        <div class="cta-banner-buttons">
+          <a href="./app.html" class="btn btn-hero-primary">
+            <span>📊</span> Abrir Mockaroo WebMCP Ahora
+          </a>
+          <a href="https://mauricioperera.github.io/webmcp-sqlite-studio/" target="_blank" rel="noopener" class="btn btn-hero-secondary">
+            <span>🗄️</span> Explorar SQLite Studio
+          </a>
+          <a href="https://mauricioperera.github.io/webmcp-code-studio/" target="_blank" rel="noopener" class="btn btn-hero-secondary">
+            <span>💻</span> Explorar Code Studio
+          </a>
+        </div>
+      </div>
+    </section>
 
-    function fallbackPrompt(text) {
-      window.prompt("Copia la siguiente instrucción para tu Agente de IA:", text);
-    }
-  </script>
-
-  <!-- Floating Toast Notification Container (TC-TMP-03, TC-UI-01) -->
-  <div id="toast-container" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none"></div>
-</body>
+    <!-- Footer -->
+    <footer class="footer">
+      <div class="container">
+        <div class="footer-top">
+          <div class="footer-brand">
+            <h3><span>📊</span> Mockaroo Static WebMCP</h3>
+            <p class="footer-text">
+              Mockaroo Static WebMCP es un generador de datos sintéticos 100% local-first desarrollado bajo la metodología Knowledge-Driven Development (KDD) y el estándar W3C WebMCP.
+            </p>
+          </div>
+          <div class="footer-links-group">
+            <h4>La Trilogía WebMCP</h4>
+            <ul>
+              <li><a href="./app.html">📊 Mockaroo WebMCP</a></li>
+              <li><a href="https://mauricioperera.github.io/webmcp-sqlite-studio/" target="_blank" rel="noopener">🗄️ WebMCP SQLite Studio</a></li>
+              <li><a href="https://mauricioperera.github.io/webmcp-code-studio/" target="_blank" rel="noopener">💻 WebMCP Code Studio</a></li>
+            </ul>
+          </div>
+          <div class="footer-links-group">
+            <h4>Recursos y Especificaciones</h4>
+            <ul>
+              <li><a href="https://fakerjs.dev/" target="_blank" rel="noopener">Faker.js Core</a></li>
+              <li><a href="https://webmcp.com/" target="_blank" rel="noopener">W3C WebMCP Draft</a></li>
+              <li><a href="./llms.txt" target="_blank">Especificación llms.txt</a></li>
+              <li><a href="https://github.com/MauricioPerera/mockaroo-webmcp" target="_blank" rel="noopener">Repositorio en GitHub</a></li>
+            </ul>
+          </div>
+        </div>
+        <div class="footer-bottom">
+          <p class="footer-copy">© 2026 WebMCP Suite • Código Abierto bajo Licencia MIT • Privacidad y Soberanía Total de Datos.</p>
+          <div class="footer-bottom-badge">
+            <span class="brand-badge">W3C WEBMCP • 100% IN-BROWSER</span>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </body>
 </html>

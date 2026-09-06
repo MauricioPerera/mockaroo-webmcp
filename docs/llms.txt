@@ -143,7 +143,9 @@ The main schema form in the DOM exposes WebMCP metadata:
 ```
 
 ## Hosted Production URLs
-- Web Application: https://mauricioperera.github.io/mockaroo-webmcp/
+- Web Application (Generator): https://mauricioperera.github.io/mockaroo-webmcp/app.html
+- Landing & Educational Hub: https://mauricioperera.github.io/mockaroo-webmcp/
 - Instructions File: https://mauricioperera.github.io/mockaroo-webmcp/llms.txt
+- Complementary Relational DB: https://mauricioperera.github.io/webmcp-sqlite-studio/
 - Complementary Web IDE: https://mauricioperera.github.io/webmcp-code-studio/
 
