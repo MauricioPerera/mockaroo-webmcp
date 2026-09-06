@@ -1,7 +1,7 @@
 import * as FastWebMcp from 'fastwebmcp';
 import { z } from 'zod';
 import { DATA_TYPES } from './dataTypes';
-import { generateRecord, generateDataset } from './generator';
+import { generateRecord, generateDataset, generateDatasetAsync } from './generator';
 import { toCSV, toJSON, toSQL, toExcel, sanitizeSchemaFields } from './formatters';
 import { DEFAULT_PRESETS } from './presets';
 import { getStoredSchemas, saveSchema, deleteSchema, exportSchemasJSON, importSchemasJSON } from './storage';
@@ -81,13 +81,66 @@ export function sanitizeRowCount(val) {
 }
 
 /**
- * Displays or removes empty state message when rows are 0 (TC-09)
+ * Modern floating toast notification system (TC-TMP-03, TC-UI-01)
+ */
+export function showToast(message, type = 'info') {
+  let container = document.getElementById('toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'fixed bottom-6 right-6 z-50 flex flex-col gap-2.5 max-w-sm w-full pointer-events-none';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'pointer-events-auto flex items-start gap-3 p-3.5 rounded-lg border shadow-xl transition-all duration-300 transform translate-y-4 opacity-0 text-sm font-sans';
+
+  let iconSvg = '';
+  if (type === 'success') {
+    toast.className += ' bg-[#1c3320] border-[#2e5d36] text-green-200';
+    iconSvg = '<svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+  } else if (type === 'error') {
+    toast.className += ' bg-[#331c1c] border-[#5d2e2e] text-red-200';
+    iconSvg = '<svg class="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+  } else if (type === 'warning') {
+    toast.className += ' bg-[#332c1c] border-[#5d4f2e] text-yellow-200';
+    iconSvg = '<svg class="w-5 h-5 text-yellow-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>';
+  } else {
+    toast.className += ' bg-[#1c2733] border-[#2e435d] text-blue-200';
+    iconSvg = '<svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+  }
+
+  toast.innerHTML = `
+    ${iconSvg}
+    <div class="flex-1 leading-snug">${escapeHtml(message)}</div>
+    <button type="button" class="text-gray-400 hover:text-white transition ml-1 flex-shrink-0">&times;</button>
+  `;
+
+  const closeBtn = toast.querySelector('button');
+  const dismiss = () => {
+    toast.classList.add('opacity-0', 'translate-y-2');
+    setTimeout(() => toast.remove(), 300);
+  };
+  closeBtn.addEventListener('click', dismiss);
+
+  container.appendChild(toast);
+  requestAnimationFrame(() => {
+    toast.classList.remove('translate-y-4', 'opacity-0');
+  });
+
+  setTimeout(dismiss, 3500);
+}
+
+/**
+ * Displays or removes empty state message and disables action buttons when rows are 0 (TC-09, TC-UI-01)
  */
 export function updateEmptyState() {
   const container = document.getElementById('fields-container');
   if (!container) return;
   const existingEmpty = document.getElementById('empty-schema-state-row');
   const rows = container.querySelectorAll('.field-row');
+  const btnPreview = document.getElementById('btn-preview');
+  const btnDownload = document.getElementById('btn-download');
 
   if (rows.length === 0) {
     if (!existingEmpty) {
@@ -104,9 +157,30 @@ export function updateEmptyState() {
       `;
       container.appendChild(emptyTr);
     }
+    // TC-UI-01: Physically disable Preview and Download buttons when schema is empty
+    if (btnPreview) {
+      btnPreview.disabled = true;
+      btnPreview.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+      btnPreview.title = 'Debe agregar al menos un campo para generar o previsualizar datos';
+    }
+    if (btnDownload) {
+      btnDownload.disabled = true;
+      btnDownload.classList.add('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+      btnDownload.title = 'Debe agregar al menos un campo para generar o previsualizar datos';
+    }
   } else {
     if (existingEmpty) {
       existingEmpty.remove();
+    }
+    if (btnPreview) {
+      btnPreview.disabled = false;
+      btnPreview.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+      btnPreview.title = '';
+    }
+    if (btnDownload) {
+      btnDownload.disabled = false;
+      btnDownload.classList.remove('opacity-40', 'cursor-not-allowed', 'pointer-events-none');
+      btnDownload.title = '';
     }
   }
 }
@@ -248,6 +322,24 @@ export function createFieldRowElement(field = {}) {
       e.target.value = `field_${idx > 0 ? idx : 1}`;
     }
   });
+
+  // Bind strict clamping on blank % (TC-UI-03)
+  const blankInput = tr.querySelector('.field-blank-input');
+  if (blankInput) {
+    const clampBlank = (e) => {
+      let num = parseFloat(e.target.value);
+      if (isNaN(num) || num < 0) num = 0;
+      else if (num > 100) num = 100;
+      e.target.value = num;
+    };
+    blankInput.addEventListener('input', (e) => {
+      const num = parseFloat(e.target.value);
+      if (num > 100) e.target.value = 100;
+      else if (num < 0) e.target.value = 0;
+    });
+    blankInput.addEventListener('change', clampBlank);
+    blankInput.addEventListener('blur', clampBlank);
+  }
 
   // Bind row events
   const btnSelectType = tr.querySelector('.btn-select-type');
@@ -422,17 +514,20 @@ function buildPresetsModal() {
   const schemas = getStoredSchemas();
 
   for (const [id, preset] of Object.entries(schemas)) {
+    if (!preset || typeof preset !== 'object') continue;
+    const fieldsCount = Array.isArray(preset.fields) ? preset.fields.length : 0;
+
     const card = document.createElement('div');
     card.className = 'bg-[#2b2b2b] border border-[#4a4a4a] hover:border-primary-green p-3 rounded transition flex items-center justify-between group';
     card.innerHTML = `
       <div>
         <div class="flex items-center gap-2">
-          <span class="font-bold text-sm text-gray-100 group-hover:text-primary-green transition">${escapeHtml(preset.name)}</span>
+          <span class="font-bold text-sm text-gray-100 group-hover:text-primary-green transition">${escapeHtml(preset.name || id)}</span>
           <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#222] text-gray-400">${escapeHtml(id)}</span>
           ${DEFAULT_PRESETS[id] ? '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-950 text-green-300">Preset</span>' : '<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-950 text-blue-300">Custom</span>'}
         </div>
         <p class="text-xs text-gray-400 mt-0.5">${escapeHtml(preset.description || '')}</p>
-        <span class="text-[11px] text-gray-500 mt-1 inline-block">${preset.fields ? preset.fields.length : 0} fields configured</span>
+        <span class="text-[11px] text-gray-500 mt-1 inline-block">${fieldsCount} fields configured</span>
       </div>
       <div class="flex items-center gap-2">
         <button type="button" class="btn-load-preset px-3 py-1.5 bg-primary-green hover:bg-primary-green-hover text-white rounded text-xs font-semibold transition">
@@ -447,9 +542,14 @@ function buildPresetsModal() {
     `;
 
     card.querySelector('.btn-load-preset').addEventListener('click', () => {
-      loadSchemaIntoDOM(preset.fields);
-      const titleSpan = document.getElementById('active-preset-name');
-      if (titleSpan) titleSpan.textContent = preset.name;
+      if (Array.isArray(preset.fields) && preset.fields.length > 0) {
+        loadSchemaIntoDOM(preset.fields);
+        const titleSpan = document.getElementById('active-preset-name');
+        if (titleSpan) titleSpan.textContent = preset.name || id;
+        showToast(`Plantilla "${preset.name || id}" cargada en el editor`, 'success');
+      } else {
+        showToast(`La plantilla "${preset.name || id}" no tiene campos válidos.`, 'error');
+      }
       closeModal('presets-modal');
     });
 
@@ -553,13 +653,13 @@ function registerWebMcpTools() {
     }
   });
 
-  // Tool 3: generate_data (Defensive TC-17)
+  // Tool 3: generate_data (TC-MCP-05, TC-MCP-06)
   registerTool({
     name: 'generate_data',
     description: 'Generates synthetic records directly in browser memory. Supports count (1-10000) and custom fields or presets.',
     inputSchema: z.object({
-      count: z.number().min(1).max(10000).default(5),
-      format: z.enum(['json', 'csv']).default('json'),
+      count: z.number().optional().default(5),
+      format: z.enum(['json', 'csv']).optional().default('json'),
       preset: z.string().optional(),
       fields: z.array(z.object({
         name: z.string().optional().default(''),
@@ -570,7 +670,22 @@ function registerWebMcpTools() {
     }),
     execute: async ({ count = 5, format = 'json', preset, fields }) => {
       try {
-        const clampedCount = sanitizeRowCount(count);
+        const numCount = Number(count);
+        if (isNaN(numCount) || numCount <= 0) {
+          return {
+            success: false,
+            error: "Validation error: Count must be between 1 and 10000.",
+            data: []
+          };
+        }
+
+        let warning;
+        let clampedCount = Math.floor(numCount);
+        if (clampedCount > 10000) {
+          clampedCount = 10000;
+          warning = `Requested count (${numCount}) exceeded maximum allowed of 10000; truncated to 10000 records.`;
+        }
+
         let schemaToUse = fields;
 
         if (!schemaToUse || !schemaToUse.length) {
@@ -580,7 +695,7 @@ function registerWebMcpTools() {
             if (!p) {
               return {
                 success: false,
-                error: `Preset "${preset}" not found. Available presets: ${Object.keys(DEFAULT_PRESETS).join(', ')}`
+                error: `Schema not found: Preset "${preset}" not found. Available presets: ${Object.keys(DEFAULT_PRESETS).join(', ')}`
               };
             }
             if (p && p.fields) schemaToUse = p.fields;
@@ -590,10 +705,15 @@ function registerWebMcpTools() {
           }
         }
 
+        // TC-MCP-06: Edge case - empty fields: [] returns empty records array without throwing
         if (!schemaToUse || !schemaToUse.length) {
+          const emptyRecords = Array.from({ length: clampedCount }, () => ({}));
+          if (format === 'csv') return '';
           return {
-            success: false,
-            error: "No fields defined in schema. Provide a fields array or load a preset."
+            success: true,
+            count: emptyRecords.length,
+            warning: "No columns defined in schema; generated empty records.",
+            data: emptyRecords
           };
         }
 
@@ -612,10 +732,14 @@ function registerWebMcpTools() {
           return toCSV(records, sanitizedSchema);
         }
 
+        const warningsList = [];
+        if (warning) warningsList.push(warning);
+        if (unknownTypes.length) warningsList.push(`Unknown types fallback used: ${unknownTypes.join(', ')}`);
+
         return {
           success: true,
           count: records.length,
-          warnings: unknownTypes.length ? `Unknown types fallback used: ${unknownTypes.join(', ')}` : undefined,
+          warnings: warningsList.length ? warningsList.join(' | ') : undefined,
           data: records
         };
       } catch (err) {
@@ -627,7 +751,7 @@ function registerWebMcpTools() {
     }
   });
 
-  // Tool 4: load_schema_in_ui (Defensive TC-18)
+  // Tool 4: load_schema_in_ui (TC-MCP-03)
   registerTool({
     name: 'load_schema_in_ui',
     description: 'Replaces the currently visible schema in the user interface with a specified preset or custom schema.',
@@ -636,59 +760,73 @@ function registerWebMcpTools() {
     }),
     execute: async ({ schema_name }) => {
       try {
-        if (!schema_name || typeof schema_name !== 'string') {
-          return { success: false, error: "schema_name parameter is required." };
+        const cleanName = (schema_name || '').trim();
+        if (!cleanName) {
+          return { success: false, error: "Schema not found: schema_name parameter cannot be empty." };
         }
         const schemas = getStoredSchemas();
-        const s = schemas[schema_name] || DEFAULT_PRESETS[schema_name];
-        if (!s || !s.fields || !s.fields.length) {
+        const s = schemas[cleanName] || DEFAULT_PRESETS[cleanName];
+        if (!s || !s.fields || !Array.isArray(s.fields) || !s.fields.length) {
+          const available = Object.keys({ ...DEFAULT_PRESETS, ...schemas }).join(', ');
           return {
             success: false,
-            error: `Schema or preset "${schema_name}" not found. Available schemas: ${Object.keys(schemas).join(', ')}`
+            error: `Schema not found: Schema "${cleanName}" does not exist. Available schemas: ${available}`
           };
         }
         loadSchemaIntoDOM(s.fields);
         const titleSpan = document.getElementById('active-preset-name');
         if (titleSpan) titleSpan.textContent = s.name;
-        return { success: true, loaded_schema: schema_name, fields_count: s.fields.length };
+        showToast(`Plantilla "${s.name}" cargada en el editor`, 'success');
+        return { success: true, loaded_schema: cleanName, fields_count: s.fields.length };
       } catch (err) {
-        return { success: false, error: err.message };
+        return { success: false, error: `Schema not found: ${err.message}` };
       }
     }
   });
 
-  // Tool 5: add_field_to_ui (Defensive TC-10, TC-17)
+  // Tool 5: add_field_to_ui (TC-MCP-04)
   registerTool({
     name: 'add_field_to_ui',
     description: 'Dynamically adds a new column/field row to the table in the user interface.',
     inputSchema: z.object({
-      name: z.string().optional().default('').describe('Column/field name (e.g. status, score, user_id)'),
-      type: z.string().optional().default('first_name').describe('Data generator type key (e.g. email, uuid_v4, integer, price, date_past)'),
+      name: z.string().describe('Column/field name (cannot be empty)'),
+      type: z.string().describe('Data generator type key from get_data_types'),
       blank: z.number().min(0).max(100).optional().default(0),
       formula: z.string().optional()
     }),
-    execute: async ({ name = '', type = 'first_name', blank = 0, formula = '' }) => {
+    execute: async ({ name, type, blank = 0, formula = '' }) => {
       try {
+        const trimmedName = (name || '').trim();
+        if (!trimmedName) {
+          return {
+            success: false,
+            error: "Validation error: Field 'name' cannot be empty or blank."
+          };
+        }
+
+        const trimmedType = (type || '').trim();
+        if (!trimmedType || (!DATA_TYPES[trimmedType] && trimmedType !== 'formula')) {
+          return {
+            success: false,
+            error: `Validation error: Type "${trimmedType}" is not a recognized data type. Use get_data_types to see available types.`
+          };
+        }
+
         const container = document.getElementById('fields-container');
         if (!container) {
           return { success: false, error: "Fields container not found in DOM." };
         }
 
-        let trimmedName = (name || '').trim();
-        if (!trimmedName) {
-          const currentCount = container.querySelectorAll('.field-row').length;
-          trimmedName = `field_${currentCount + 1}`;
-        }
-
-        const effectiveType = DATA_TYPES[type] ? type : 'first_name';
-        const row = createFieldRowElement({ name: trimmedName, type: effectiveType, blank, formula });
+        const clampedBlank = Math.min(Math.max(parseFloat(blank) || 0, 0), 100);
+        const row = createFieldRowElement({ name: trimmedName, type: trimmedType, blank: clampedBlank, formula });
         container.appendChild(row);
         updateEmptyState();
 
+        showToast(`Campo "${trimmedName}" (${trimmedType}) añadido a la tabla`, 'success');
+
         return {
           success: true,
-          added_field: { name: trimmedName, type: effectiveType, blank, formula },
-          warning: !DATA_TYPES[type] ? `Type "${type}" unknown; defaulted to "first_name"` : undefined
+          added_field: { name: trimmedName, type: trimmedType, blank: clampedBlank, formula }
         };
       } catch (err) {
         return { success: false, error: err.message };
@@ -776,10 +914,10 @@ function renderPreviewModal(records, schema) {
 /**
  * Triggers browser download of a generated blob with validation (TC-06, TC-07, TC-08, TC-09)
  */
-export function downloadDataset() {
+export async function downloadDataset() {
   const schema = getCurrentSchemaFromDOM();
   if (!schema || schema.length === 0) {
-    alert('⚠️ Error de esquema: Agregue al menos una columna antes de generar y descargar datos.');
+    showToast('Debe agregar al menos un campo para generar o descargar datos.', 'warning');
     return;
   }
 
@@ -802,51 +940,57 @@ export function downloadDataset() {
   const originalText = btn ? btn.innerHTML : '';
   if (btn) {
     btn.disabled = true;
-    btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Generating...`;
+    btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Generating...</span>`;
   }
 
-  setTimeout(() => {
-    try {
-      const records = generateDataset(schema, count);
-      let blob;
-      let filename = `mock_data_${Date.now()}`;
-
-      if (format === 'csv') {
-        const text = toCSV(records, schema, { delimiter, header: includeHeader, bom: includeBOM });
-        blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
-        filename += '.csv';
-      } else if (format === 'json') {
-        const text = toJSON(records, { minify: minifyJSON });
-        blob = new Blob([text], { type: 'application/json;charset=utf-8;' });
-        filename += '.json';
-      } else if (format === 'sql') {
-        const text = toSQL(records, schema, { tableName: sqlTable, dialect: sqlDialect });
-        blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
-        filename += '.sql';
-      } else if (format === 'excel') {
-        const buffer = toExcel(records, schema);
-        blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-        filename += '.xlsx';
-      }
-
-      // Trigger automatic browser download
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      alert(`Error generating dataset: ${err.message}`);
-    } finally {
+  try {
+    // Asynchronous chunked generation (TC-GEN-01)
+    const records = await generateDatasetAsync(schema, count, (pct) => {
       if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
+        btn.innerHTML = `<svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>Generating ${pct}%</span>`;
       }
+    });
+
+    let blob;
+    let filename = `mock_data_${Date.now()}`;
+
+    if (format === 'csv') {
+      const text = toCSV(records, schema, { delimiter, header: includeHeader, bom: includeBOM });
+      blob = new Blob([text], { type: 'text/csv;charset=utf-8;' });
+      filename += '.csv';
+    } else if (format === 'json') {
+      const text = toJSON(records, { minify: minifyJSON });
+      blob = new Blob([text], { type: 'application/json;charset=utf-8;' });
+      filename += '.json';
+    } else if (format === 'sql') {
+      const text = toSQL(records, schema, { tableName: sqlTable, dialect: sqlDialect });
+      blob = new Blob([text], { type: 'text/plain;charset=utf-8;' });
+      filename += '.sql';
+    } else if (format === 'excel') {
+      const buffer = toExcel(records, schema);
+      blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      filename += '.xlsx';
     }
-  }, 20);
+
+    // Trigger automatic browser download
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast(`Archivo ${filename} generado (${records.length} filas)`, 'success');
+  } catch (err) {
+    showToast(`Error al generar datos: ${err.message}`, 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+    }
+  }
 }
 
 // Global modal helpers
@@ -926,13 +1070,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 7. Setup Preview Button (TC-09)
+  // 7. Setup Preview Button (TC-09, TC-UI-01)
   const btnPreview = document.getElementById('btn-preview');
   if (btnPreview) {
     btnPreview.addEventListener('click', () => {
       const schema = getCurrentSchemaFromDOM();
       if (!schema || schema.length === 0) {
-        alert('⚠️ Error de esquema: Agregue al menos una columna antes de previsualizar datos.');
+        showToast('Debe agregar al menos un campo para generar o previsualizar datos.', 'warning');
         return;
       }
       const records = generateDataset(schema, 10);
@@ -941,16 +1085,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 8. Setup Row Count Constraints (TC-06, TC-07, TC-08)
+  // 8. Setup Row Count Constraints (TC-06, TC-07, TC-08, TC-GEN-01)
   const countInput = document.getElementById('num_records');
   if (countInput) {
     countInput.addEventListener('blur', (e) => {
+      e.target.value = sanitizeRowCount(e.target.value);
+    });
+    countInput.addEventListener('change', (e) => {
       e.target.value = sanitizeRowCount(e.target.value);
     });
     countInput.addEventListener('input', (e) => {
       const val = parseInt(e.target.value, 10);
       if (val > 10000) {
         e.target.value = 10000;
+        showToast('El límite máximo en el navegador es de 10,000 filas para prevenir bloqueos.', 'warning');
+      } else if (val < 1 && e.target.value !== '') {
+        e.target.value = 1;
       }
     });
   }
@@ -1028,8 +1178,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const a = document.createElement('a');
       a.href = url;
       a.download = `mockaroo_schemas_${Date.now()}.json`;
+      document.body.appendChild(a);
       a.click();
-      URL.revokeObjectURL(a);
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast('Esquemas exportados a JSON exitosamente', 'info');
     });
   }
 
@@ -1043,11 +1196,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const reader = new FileReader();
       reader.onload = (evt) => {
         try {
-          importSchemasJSON(evt.target.result);
+          const res = importSchemasJSON(evt.target.result);
           buildPresetsModal();
-          alert('Schemas imported successfully!');
+          showToast(`Se importaron ${res.count || 1} plantilla(s) correctamente.`, 'success');
         } catch (err) {
-          alert('Invalid JSON file format.');
+          showToast(err.message || 'El archivo JSON no tiene un formato válido.', 'error');
+        } finally {
+          fileImport.value = '';
         }
       };
       reader.readAsText(file);

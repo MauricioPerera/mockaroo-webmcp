@@ -20,7 +20,8 @@ export function generateRecord(schema, rowIndex) {
       fieldName = `field_${i + 1}`;
     }
 
-    const blankPct = parseFloat(field.blank || 0);
+    // TC-UI-03: Strictly clamp blank percentage between 0 and 100
+    const blankPct = Math.min(Math.max(parseFloat(field.blank || 0) || 0, 0), 100);
     const isBlank = blankPct > 0 && Math.random() * 100 < blankPct;
 
     if (isBlank) {
@@ -44,7 +45,7 @@ export function generateRecord(schema, rowIndex) {
     }
   }
 
-  // Pass 2: evaluate formulas with full record context (TC-14, TC-15)
+  // Pass 2: evaluate formulas with full record context (TC-14, TC-15, TC-UI-04)
   for (const field of deferredFormulas) {
     const expr = (field.formula || (field.options && field.options.formula) || '').trim();
     if (!expr) {
@@ -52,28 +53,51 @@ export function generateRecord(schema, rowIndex) {
       continue;
     }
 
-    // Isolate compilation (SyntaxError) and execution (TypeError / ReferenceError)
+    // Isolate compilation (SyntaxError) and execution (TypeError / ReferenceError) per cell
     try {
       let fn;
       try {
-        fn = new Function('record', 'faker', 'rowIndex', `
-          "use strict";
-          const self = record;
-          try {
-            return (${expr});
-          } catch (runtimeErr) {
-            return "[Error fx: " + runtimeErr.message + "]";
-          }
-        `);
+        let fnBody;
+        if (expr.includes('return ') || expr.includes(';') || expr.includes('const ') || expr.includes('let ') || expr.includes('var ')) {
+          fnBody = `
+            "use strict";
+            const self = record;
+            try {
+              ${expr}
+            } catch (runtimeErr) {
+              return "[Error fx: " + (runtimeErr ? runtimeErr.message : String(runtimeErr)) + "]";
+            }
+          `;
+        } else {
+          fnBody = `
+            "use strict";
+            const self = record;
+            try {
+              return (${expr});
+            } catch (runtimeErr) {
+              return "[Error fx: " + (runtimeErr ? runtimeErr.message : String(runtimeErr)) + "]";
+            }
+          `;
+        }
+        fn = new Function('record', 'faker', 'rowIndex', fnBody);
       } catch (syntaxErr) {
         record[field.name] = `[Error sintaxis fx: ${syntaxErr.message}]`;
         continue;
       }
 
-      const result = fn(record, faker, rowIndex);
+      let result;
+      try {
+        result = fn.call(record, record, faker, rowIndex);
+        if (typeof result === 'function') {
+          result = result.call(record, record);
+        }
+      } catch (execErr) {
+        result = `[Error fx: ${execErr ? execErr.message : String(execErr)}]`;
+      }
+
       record[field.name] = result !== undefined ? result : null;
     } catch (outerErr) {
-      record[field.name] = `[Error fx: ${outerErr.message}]`;
+      record[field.name] = `[Error fx: ${outerErr ? outerErr.message : String(outerErr)}]`;
     }
   }
 
@@ -96,3 +120,31 @@ export function generateDataset(schema, count = 10) {
   }
   return data;
 }
+
+/**
+ * Generate N records asynchronously in chunks to prevent blocking event loop (TC-GEN-01)
+ */
+export async function generateDatasetAsync(schema, count = 10, onProgress = null) {
+  if (!schema || !Array.isArray(schema) || schema.length === 0) {
+    return [];
+  }
+  const sanitizedSchema = sanitizeSchemaFields(schema);
+  const parsed = parseInt(count, 10);
+  const numRows = Math.min(Math.max(isNaN(parsed) ? 10 : parsed, 1), 10000);
+  const data = [];
+  const chunkSize = 250;
+
+  for (let i = 1; i <= numRows; i++) {
+    data.push(generateRecord(sanitizedSchema, i));
+    if (i % chunkSize === 0 || i === numRows) {
+      if (typeof onProgress === 'function') {
+        onProgress(Math.round((i / numRows) * 100), i, numRows);
+      }
+      if (numRows > 500) {
+        await new Promise(resolve => setTimeout(resolve, 0));
+      }
+    }
+  }
+  return data;
+}
+
