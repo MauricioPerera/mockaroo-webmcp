@@ -31,6 +31,12 @@ if (typeof document !== 'undefined' && !document.modelContext) {
 
 // Global window helpers
 if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'modelContext', {
+    get() {
+      return typeof document !== 'undefined' ? document.modelContext : undefined;
+    },
+    configurable: true
+  });
   window.FastWebMcp = FastWebMcp;
   window.z = z;
   window.DATA_TYPES = DATA_TYPES;
